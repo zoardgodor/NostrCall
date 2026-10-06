@@ -1,41 +1,47 @@
 # NostrCall
 
-A static, browser-based voice calling demo. Nostr relays carry encrypted call signaling; voice travels directly between browsers using WebRTC.
+NostrCall is a browser-based voice calling application. It uses Nostr relays for encrypted call signaling and WebRTC for direct peer-to-peer audio.
 
-## Run locally
+## Live website
 
-Open `index.html` through a local web server. For example, with Python installed:
+The deployed application is available at:
 
-```sh
-python -m http.server 8000
-```
+https://zoardgodor.github.io/NostrCall/
 
-Then visit `http://localhost:8000`. Microphone access requires a secure context: HTTPS or localhost. The app has no build step and can be published from the repository root with GitHub Pages.
+Open the live website in a current browser. No local installation, build step, or local web server is required.
 
-The Nostr Tools module is loaded from esm.sh at runtime, and the interface font is loaded from Google Fonts. A network connection is needed for those resources, Nostr relays, and calls.
+## How it works
 
-## First launch
+- The browser creates a Nostr keypair and stores the private key in local browser storage.
+- A short calling code is published as a public Nostr profile event.
+- Call requests, answers, ICE candidates, declines, and hangups are sent as encrypted NIP-04 events.
+- Voice is transmitted directly between browsers using WebRTC. Nostr relays do not carry the audio stream.
+- The application supports English and Hungarian.
 
-Enter a display name and select **Start**. The app creates a Nostr keypair in the browser and shows a short, randomly generated calling code. Share that code with the person who should call you. It is not a password or a cryptographic secret.
+Both callers must have the website open, be connected to at least one relay, and grant microphone permission. The site cannot receive calls while the browser is closed and does not provide push notifications or a TURN server.
 
-Your private key is saved in this browser's local storage and is never published to relays. Clearing browser storage or deleting the account permanently removes the local key. There is no key recovery or account synchronization.
+## Use NostrCall
 
-## Calls and relays
+1. Open the [live website](https://zoardgodor.github.io/NostrCall/).
+2. Enter a display name and select **Start**.
+3. Share the generated calling code with the person you want to call.
+4. The recipient can enter the code in the app and start a call.
+5. Use the call controls to mute your microphone, silence incoming audio, or end the call.
 
-The short code is published as a public Nostr replaceable event so another online user can resolve it to your public key and display name. Call signaling is sent in NIP-04 encrypted Nostr events. Audio is carried peer-to-peer using WebRTC and is not routed through Nostr relays. The relay list can be edited in Settings.
+The calling code is not a password or a cryptographic secret. The private key is not published to relays, but it is stored in the current browser. Clearing browser storage or deleting the account permanently removes the local key, and there is no key recovery or account synchronization.
 
-Both people must have the page open, have a working relay connection, and grant microphone permission. This static site cannot wake a browser, deliver push notifications, or receive calls while closed. Network firewalls may prevent a direct WebRTC connection; this demo does not provide a TURN media server, so some networks will not connect. Browsers must support WebRTC and NIP-04 (the bundled Nostr Tools library does).
+## Relays and network requirements
 
-The public code directory is relay-dependent and offers no guaranteed availability or global uniqueness. A code can be overwritten by another account, and anyone who learns your code can look up its public profile and attempt to call. Choose a display name that does not expose information you want to keep private.
+The application uses the default Nostr relays configured in the app. Relay settings can be changed in the Settings dialog. A working network connection is required for the Nostr Tools module, external fonts, relay connections, and call signaling.
+
+The public calling-code directory is relay-dependent and does not provide guaranteed availability or global uniqueness. A code can be overwritten by another account, and anyone who learns the code can look up its public profile and attempt to call. Choose a display name that does not expose information you want to keep private.
+
+Network firewalls or browser policies may prevent a direct WebRTC connection. Because this project does not include a TURN media server, some networks may not establish a call.
 
 ## Browser support
 
-Use a current desktop or mobile browser with WebRTC, Web Crypto, and microphone support. Input selection is available where the browser exposes audio input devices. Output selection depends on `HTMLMediaElement.setSinkId`; many browsers do not support it. The app lets you mute your microphone and silence incoming audio.
+Use a current desktop or mobile browser that supports WebRTC, Web Crypto, and microphone access. Microphone access requires a secure context such as HTTPS or localhost. Audio output selection depends on browser support for `HTMLMediaElement.setSinkId`.
 
 ## Privacy and terms
 
-The in-app Privacy Policy and Terms of Service describe the app's current behavior. This project is an experimental demo, not an emergency calling service. No warranty, availability commitment, or legal advice is provided. Review the source and the relay operators' policies before use.
-
-## GitHub Pages
-
-In repository settings, choose **Pages**, select the deployment branch and `/ (root)` folder, then save. No build command or artifact directory is required.
+The in-app Privacy Policy and Terms of Service describe the current behavior of the application. NostrCall is an experimental demo, not an emergency calling service. Review the source and the relay operators' policies before using the application.
