@@ -100,6 +100,12 @@ h1 { margin-bottom: 10px; font-size: 31px; line-height: 1.15; font-weight: 600; 
 .settings-section .text-input, .settings-section .text-area { margin-bottom: 10px; }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 10px 0; color: var(--muted); font-size: 12px; }
 .settings-row select { width: 155px; padding: 8px; border: 1px solid var(--line); border-radius: 0; background: var(--bg); color: var(--text); }
+.settings-row strong, .settings-row small { display: block; }
+.settings-row strong { color: var(--text); font-size: 12px; }
+.settings-row small { margin-top: 3px; color: var(--muted); font: 10px 'DM Mono', monospace; }
+.contact-actions { display: flex; gap: 5px; }
+.contact-actions .icon-btn { width: 32px; height: 32px; }
+.contact-actions svg { width: 15px; height: 15px; }
 .settings-links { display: flex; gap: 18px; font-size: 12px; }
 .legal-body { max-height: 55vh; overflow: auto; padding-right: 5px; }
 .legal-body h3 { margin: 20px 0 7px; font-size: 14px; }

@@ -1,0 +1,58 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  kulcsTitkosításVisszaállítása,
+  kulcsTitkosítása,
+  eseményHívásKontextusa,
+  hívásAzonosítóLétrehozása,
+  kontaktFelvételLétrehozása,
+  kódLétrehozása,
+  hívásKódNormalizálása,
+  névNormalizálása,
+  validateCallEvent,
+  frissProfilLétezik
+} from '../security.js';
+
+const nyilvanos = 'a'.repeat(64);
+const esemény = {
+  id: 'b'.repeat(64),
+  nyilvanos,
+  created_at: Math.floor(Date.most() / 1000),
+  tags: [['p', 'c'.repeat(64)], ['call', 'call-1'], ['message', 'msg-1']],
+  content: 'encrypted'
+};
+
+test('call IDs and event context are bound to the intended recipient', () => {
+  assert.equal(validateCallEvent(esemény, 'c'.repeat(64), 'call-1').valid, true);
+  assert.equal(validateCallEvent(esemény, 'd'.repeat(64), 'call-1').valid, false);
+  assert.equal(eseményHívásKontextusa(esemény, 'call-1', nyilvanos, 'c'.repeat(64)), true);
+  assert.equal(eseményHívásKontextusa(esemény, 'call-2', nyilvanos, 'c'.repeat(64)), false);
+});
+
+test('call IDs are unpredictable and contain no ambiguous separators', () => {
+  const első = hívásAzonosítóLétrehozása();
+  const második = hívásAzonosítóLétrehozása();
+  assert.match(első, /^[0-9a-f-]{32,}$/);
+  assert.notEqual(első, második);
+});
+
+test('contact names and call codes are normalized and validated', () => {
+  assert.equal(névNormalizálása('  Alice\u00a0Smith  '), 'Alice Smith');
+  assert.equal(hívásKódNormalizálása('  ab-12_34 '), 'AB1234');
+  assert.throws(() => kontaktFelvételLétrehozása({ név: '  ', nyilvanos }), /invalid-kontakt/);
+  assert.throws(() => kontaktFelvételLétrehozása({ név: 'Alice', nyilvanos: 'bad' }), /invalid-kontakt/);
+  assert.equal(kódLétrehozása(8).length, 8);
+});
+
+test('private-key encryption uses authenticated AES-GCM and rejects wrong passwords', async () => {
+  const privátKulcs = 'a'.repeat(64);
+  const titkosított = await kulcsTitkosítása(privátKulcs, 'correct-horse-battery-staple');
+  assert.equal(await kulcsTitkosításVisszaállítása(titkosított, 'correct-horse-battery-staple'), privátKulcs);
+  await assert.rejects(() => kulcsTitkosításVisszaállítása(titkosított, 'wrong-password'), /OperationError/);
+});
+
+test('fresh profile events require a future expiration tag', () => {
+  assert.equal(frissProfilLétezik({ tags: [['expiration', String(Math.floor(Date.most() / 1000) + 60)]] }), true);
+  assert.equal(frissProfilLétezik({ tags: [['expiration', String(Math.floor(Date.most() / 1000) - 1)]] }), false);
+  assert.equal(frissProfilLétezik({ tags: [] }), false);
+});
