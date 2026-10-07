@@ -1,5 +1,5 @@
-import {
-  bytesToHex, contactExists, contactNameConflict, decryptKey, encryptKey, hexToBytes,
+﻿import {
+  bytesToHex, contactCodeExists, contactExists, contactNameConflict, decryptKey, encryptKey, hexToBytes,
   hasFreshProfile, isValidPubkey, loadContacts, loadKeyRecord, makeCallId, makeContactRecord,
   normalizeName, saveContacts, saveKeyRecord, deleteKeyRecord, verifyCallEvent,
   kódLétrehozása, hívásKódNormalizálása, névNormalizálása, frissProfilLétezik,
@@ -22,16 +22,16 @@ const jelek = ikonok;
 const üzenetek = {
   en: {
     app: 'NostrCall', tag: 'VOICE OVER NOSTR', homeTitle: 'Make a private call.', homeLead: 'Enter a contact code to look up who you want to reach.', codeLabel: 'CONTACT CODE', codePlaceholder: 'For example, 7K4Q9M', next: 'Continue', yourCode: 'YOUR CALLING CODE', copy: 'Copy', copied: 'Copied', settings: 'Settings', relays: 'relays connected', unavailable: 'Nostr library unavailable. Check your connection and reload.',
-    welcome: 'Your voice, your keys.', welcomeLead: 'Create a local account to get a short code people can call.', név: 'DISPLAY NAME', namePlaceholder: 'How should people see you?', start: 'Start', agree: 'By continuing, you agree to the', terms: 'Terms of Service', privacy: 'Privacy Policy', and: 'and', codeIntro: 'Your calling code', codeHelp: 'You can share this code with people you trust.',
+    welcome: 'Your voice, your keys.', welcomeLead: 'Create a local account to get a short code people can call.', név: 'DISPLAY NAME', namePlaceholder: 'How should people see you?', customCode: 'CUSTOM CALLING CODE', customCodePlaceholder: 'Leave blank to generate one', start: 'Start', agree: 'By continuing, you agree to the', terms: 'Terms of Service', privacy: 'Privacy Policy', and: 'and', codeIntro: 'Your calling code', codeHelp: 'You can share this code with people you trust.',
     lookupTitle: 'Call this person?', call: 'Call', cancel: 'Cancel', unknown: 'No account found for this code. The person may be offline or not published to these relays.',
     calling: 'Calling', ringing: 'Ringing', connecting: 'Connecting', connected: 'Connected', busy: 'Busy', noanswer: 'No answer', rejected: 'Call declined', ended: 'Call ended', incoming: 'Incoming call', from: 'is calling you', accept: 'Accept', decline: 'Decline', hangup: 'End call', mute: 'Mute microphone', unmute: 'Unmute microphone', deafen: 'Silence audio', undeafen: 'Restore audio', input: 'Microphone', output: 'Speaker', quality: 'Connection quality',
     account: 'Account', save: 'Save changes', saved: 'Saved', display: 'Display name', language: 'Language', english: 'English', hungarian: 'Hungarian', relaySettings: 'Nostr relays', relayHelp: 'One secure WebSocket relay URL per line.', reconnect: 'Save and reconnect', erase: 'Delete account', eraseWarn: 'This permanently removes your local key and settings. Your published relay profile may remain until relays remove it.', eraseFirst: 'Delete this account?', eraseSecond: 'This cannot be undone. Type DELETE to confirm.', typeDelete: 'Type DELETE', deleteNow: 'Delete permanently', back: 'Back', close: 'Close', legal: 'Legal',
     termsTitle: 'Terms of Service', privacyTitle: 'Privacy Policy', lastUpdated: 'Last updated: October 6, 2026', termsP1: 'NostrCall is an experimental, peer-to-peer voice calling demo. By using it, you agree to use it lawfully and respectfully. You are responsible for the display name and calling code you share.', termsP2: 'Calls are not guaranteed to connect, remain private from your device or network provider, or be available at any time. Do not use NostrCall for emergency calls or for information whose loss or disclosure could cause harm.', termsP3: 'You are responsible for protecting access to your device and browser profile. Anyone with access to this browser storage may be able to use your account. Deleting the account removes its key from this browser but cannot recall events already distributed to relays.', termsP4: 'The software is provided as-is, without warranties or service-level commitments, to the extent permitted by law. These terms may be updated with the published application. Applicable mandatory consumer rights remain unaffected.', privacyP1: 'NostrCall has no application server and does not collect analytics. Your private key, display name, settings, and language choice are stored in this browser using local storage or IndexedDB. The private key is used locally to sign and encrypt Nostr events and is never intentionally sent to a relay.', privacyP2: 'Your short code, public key, and display name are published in a public Nostr event so other users can find you. Relay operators may store, copy, index, or disclose that event under their own policies. Anyone who knows your code can look up the public profile and try to call.', privacyP3: 'Call setup messages are encrypted between Nostr keys using NIP-44 v2. Relays can still observe event timing, size, and routing metadata. Voice media is sent directly between browsers with WebRTC, not through the Nostr relays. Your network may observe the peer connection. This demo does not include a TURN relay.', privacyP4: 'The browser asks for microphone permission only when you place or accept a call. Available device labels and selections are handled by the browser. Calls and incoming call alerts work only while the page is open and connected.', privacyP5: 'You can change your name, relay list, or language in Settings and delete the local account there. Clearing site data also removes the locally stored key. Public relay events may persist after either action. For questions, contact the person or organization that hosts this copy of the static site.',
-    micDenied: 'Microphone access was not granted. Check your browser permission.', callFail: 'Could not establish the call. Check microphone access and relay connectivity.', relayFail: 'Could not publish to a relay. Check the relay list and connection.', invalidCode: 'Enter a code with at least 4 characters.', badName: 'Enter a display name.', connectedHint: 'Peer-to-peer audio is active.', notSupported: 'Device selection is not supported by this browser.', noDevice: 'No audio device found.'
+    micDenied: 'Microphone access was not granted. Check your browser permission.', callFail: 'Could not establish the call. Check microphone access and relay connectivity.', relayFail: 'Could not publish to a relay. Check the relay list and connection.', invalidCode: 'Enter a code with 4–24 letters or numbers.', badName: 'Enter a display name.', connectedHint: 'Peer-to-peer audio is active.', notSupported: 'Device selection is not supported by this browser.', noDevice: 'No audio device found.'
   },
   hu: {
     app: 'NostrCall', tag: 'HANGHÍVÁS NOSTR-RELÉKEN', homeTitle: 'Indíts privát hívást.', homeLead: 'Írd be annak a kódját, akit el szeretnél érni.', codeLabel: 'HÍVÁSKÓD', codePlaceholder: 'Például: 7K4Q9M', next: 'Tovább', yourCode: 'A TE HÍVÁSKÓD', copy: 'Másolás', copied: 'Kimásolva', settings: 'Beállítások', relays: 'kapcsolódó relé', unavailable: 'A Nostr-könyvtár nem érhető el. Ellenőrizd a kapcsolatot, majd töltsd újra az oldalt.',
-    welcome: 'A hangod, a kulcsaid.', welcomeLead: 'Hozz létre egy helyi fiókot, hogy mások egy rövid kóddal hívhassanak.', név: 'MEGJELENŐ NÉV', namePlaceholder: 'Milyen néven lássanak?', start: 'Indítás', agree: 'A folytatással elfogadod a', terms: 'Felhasználási feltételeket', privacy: 'Adatvédelmi irányelveket', and: 'és az', codeIntro: 'A híváskódod', codeHelp: 'Ezt a kódot azokkal oszd meg, akikben megbízol.',
+    welcome: 'A hangod, a kulcsaid.', welcomeLead: 'Hozz létre egy helyi fiókot, hogy mások egy rövid kóddal hívhassanak.', név: 'MEGJELENŐ NÉV', namePlaceholder: 'Milyen néven lássanak?', customCode: 'SAJÁT HÍVÁSKÓD', customCodePlaceholder: 'Hagyjál üresen a generáláshoz', start: 'Indítás', agree: 'A folytatással elfogadod a', terms: 'Felhasználási feltételeket', privacy: 'Adatvédelmi irányelveket', and: 'és az', codeIntro: 'A híváskódod', codeHelp: 'Ezt a kódot azokkal oszd meg, akikben megbízol.',
     lookupTitle: 'Felhívod őt?', call: 'Hívás', cancel: 'Mégse', unknown: 'Ehhez a kódhoz nem található fiók. Lehet, hogy a másik fél offline, vagy nincs kint a reléken.',
     calling: 'Hívás', ringing: 'Kicseng', connecting: 'Kapcsolódás', connected: 'Kapcsolódva', busy: 'Foglalt', noanswer: 'Nincs válasz', rejected: 'A hívást elutasították', ended: 'Hívás vége', incoming: 'Bejövő hívás', from: 'hív téged', accept: 'Elfogadás', decline: 'Elutasítás', hangup: 'Hívás befejezése', mute: 'Mikrofon némítása', unmute: 'Mikrofon bekapcsolása', deafen: 'Hang elnémítása', undeafen: 'Hang visszakapcsolása', input: 'Mikrofon', output: 'Hangszóró', quality: 'Kapcsolat minősége',
     account: 'Fiók', save: 'Mentés', saved: 'Mentve', display: 'Megjelenő név', language: 'Nyelv', english: 'Angol', hungarian: 'Magyar', relaySettings: 'Nostr-relék', relayHelp: 'Soronként egy biztonságos WebSocket-relé címe.', reconnect: 'Mentés és újracsatlakozás', erase: 'Fiók törlése', eraseWarn: 'Ez végleg törli a helyi kulcsot és beállításokat. A közzétett reléprofil a relékről még megmaradhat.', eraseFirst: 'Törlöd ezt a fiókot?', eraseSecond: 'Ez nem vonható vissza. A megerősítéshez írd be: DELETE.', typeDelete: 'Írd be: DELETE', deleteNow: 'Végleges törlés', back: 'Vissza', close: 'Bezárás', legal: 'Jogi információk',
@@ -111,23 +111,23 @@ async function migrateLegacyKey() {
     return true;
   } catch { return false; }
 }
-async function setKeyMode(mode, password = '') {
+async function setKeyMode(mode, password = '', confirmation = '') {
   if (!fiok || !keyInMemory) throw new Error('unlock-first');
-  const passwordToUse = mode === 'password' ? password : '';
-  if (mode === 'plain') {
-    const keyHex = bytesToHex(keyInMemory);
-    await saveKeyRecord(fiok.nyilvanos, { mode: 'plain', keyHex });
-    keyRecord = { id: fiok.nyilvanos, mode: 'plain', keyHex };
-    keyMode = 'plain';
-  } else if (mode === 'password') {
+  if (mode === 'password') {
     if (!password || password.length < 10) throw new Error('weak-password');
+    if (password !== confirmation) throw new Error('password-mismatch');
     const encrypted = await encryptKey(bytesToHex(keyInMemory), password);
     await saveKeyRecord(fiok.nyilvanos, { mode: 'password', encrypted });
     keyRecord = { id: fiok.nyilvanos, mode: 'password', encrypted };
     keyMode = 'password';
+  } else if (mode === 'plain') {
+    const keyHex = bytesToHex(keyInMemory);
+    await saveKeyRecord(fiok.nyilvanos, { mode: 'plain', keyHex });
+    keyRecord = { id: fiok.nyilvanos, mode: 'plain', keyHex };
+    keyMode = 'plain';
   } else throw new Error('unsupported-key-mode');
   clearKeyMemory();
-  await loadKey(keyMode, passwordToUse);
+  await loadKey(keyMode, mode === 'password' ? password : '');
   ment();
 }
 async function deleteKey() {
@@ -355,7 +355,7 @@ function fejlec() {
   return `<header class="topbar"><div class="wrap top-inner"><div class="brand"><span class="brand-mark">${jelek.marka}</span>${esc(t('app'))}</div><div class="top-actions"><span class="relay-count"><i class="relay-dot"></i><span id="relayszam">${jelszam()} ${esc(t('relays'))}</span></span>${fiok ? `<button class="icon-btn" data-action="beall" aria-label="${kimenetiBiztosít(üzenet('settings'))}" title="${kimenetiBiztosít(üzenet('settings'))}">${jelek.ember}</button>` : ''}</div></div></header>`;
 }
 function kezdolap() {
-  if (!fiok) return `<section class="home"><div class="eyebrow">${esc(t('tag'))}</div><h1>${esc(t('welcome'))}</h1><p class="lead">${esc(t('welcomeLead'))}</p><form id="kezdo"><label class="field-label" for="név">${esc(t('name'))}</label><input class="text-input" id="név" name="név" maxlength="32" autocomplete="nickname" placeholder="${kimenetiBiztosít(üzenet('namePlaceholder'))}" required><p class="form-hiba" id="hiba"></p><div class="profile-code"><div class="profile-code-head"><span>${esc(t('codeIntro'))}</span></div>${kodDoboz(újKód, 'new')}</div><p class="notice">${esc(t('codeHelp'))}</p><div class="divider"></div><button class="primary full" type="submit">${esc(t('start'))}</button><p class="legal-jegyzet">${esc(t('agree'))} <button type="button" data-action="jog" data-jog="terms">${esc(t('terms'))}</button> ${esc(t('and'))} <button type="button" data-action="jog" data-jog="privacy">${esc(t('privacy'))}</button>.</p></form></section>`;
+  if (!fiok) return `<section class="home"><div class="eyebrow">${esc(t('tag'))}</div><h1>${esc(t('welcome'))}</h1><p class="lead">${esc(t('welcomeLead'))}</p><form id="kezdo"><label class="field-label" for="név">${esc(t('name'))}</label><input class="text-input" id="név" name="név" maxlength="32" autocomplete="nickname" placeholder="${kimenetiBiztosít(üzenet('namePlaceholder'))}" required><label class="field-label" for="saját-kód">${esc(t('customCode'))}</label><input class="text-input" id="saját-kód" name="saját-kód" maxlength="24" autocomplete="off" placeholder="${kimenetiBiztosít(üzenet('customCodePlaceholder'))}"><p class="form-hiba" id="hiba"></p><div class="profile-code"><div class="profile-code-head"><span>${esc(t('codeIntro'))}</span></div>${kodDoboz(újKód, 'new')}</div><p class="notice">${esc(t('codeHelp'))}</p><div class="divider"></div><button class="primary full" type="submit">${esc(t('start'))}</button><p class="legal-jegyzet">${esc(t('agree'))} <button type="button" data-action="jog" data-jog="terms">${esc(t('terms'))}</button> ${esc(t('and'))} <button type="button" data-action="jog" data-jog="privacy">${esc(t('privacy'))}</button>.</p></form></section>`;
   const status = nézet === 'elutasitva' ? t('rejected') : nézet === 'foglalt' ? t('busy') : nézet === 'nincsvalasz' ? t('noanswer') : nézet === 'vege' ? t('ended') : '';
   return `<section class="home"><div class="eyebrow">${esc(t('tag'))}</div><h1>${esc(t('homeTitle'))}</h1><p class="lead">${esc(t('homeLead'))}</p><form id="keres"><label class="field-label" for="kód">${esc(t('codeLabel'))}</label><input class="text-input" id="kód" name="kód" maxlength="24" autocomplete="off" placeholder="${kimenetiBiztosít(üzenet('codePlaceholder'))}" required><p class="form-hiba" id="hiba">${status ? esc(status) : könyvtárHiba ? esc(t('unavailable')) : ''}</p><button class="primary full" type="submit">${esc(t('next'))}</button></form><div class="profile-code"><div class="profile-code-head"><span>${esc(t('yourCode'))}</span></div>${kodDoboz(fiok.kod)}</div><p class="notice">${esc(t('codeHelp'))}</p></section>`;
 }
@@ -382,12 +382,11 @@ function talalatAblak() {
 }
 function beallitas() {
   const joNyelv = nyelv;
-  const keyModeLabel = keyMode === 'password' ? 'Password protected' : 'Plaintext storage';
-  const keyWarning = keyMode === 'password' ? 'The raw private key is kept only in memory while this page is open.' : 'The raw private key is stored in IndexedDB. This is convenient but not protected against a compromised browser.';
-  const contactRows = kontaktok.map(contact => `<div class="settings-row"><span><strong>${esc(contact.name)}</strong><small>${esc(contact.pubkey)}</small></span><div class="kontakt-actions"><button class="icon-btn" data-action="call-contact" data-contact-pubkey="${kimenetiBiztosít(contact.pubkey)}" aria-label="Call ${kimenetiBiztosít(kontakt.name)}">${jelek.marka}</button><button class="icon-btn" data-action="remove-contact" data-contact-id="${kimenetiBiztosít(kontakt.id)}" aria-label="Remove ${kimenetiBiztosít(kontakt.name)}">×</button></div></div>`).join('');
-  return `<div class="overlay"><article class="dialog"><div class="settings-head"><div><div class="eyebrow">${esc(t('account'))}</div><h2>${esc(t('settings'))}</h2></div><button class="icon-btn" data-action="megse" aria-label="${kimenetiBiztosít(üzenet('close'))}">×</button></div><section class="settings-section"><h3>${esc(t('account'))}</h3><label class="field-label" for="nevbe">${esc(t('display'))}</label><input class="text-input" id="nevbe" maxlength="32" value="${kimenetiBiztosít(fiok.név)}"><div class="settings-row"><span>${esc(t('language'))}</span><select id="nyelv"><option value="en" ${joNyelv === 'en' ? 'selected' : ''}>${esc(t('english'))}</option><option value="hu" ${joNyelv === 'hu' ? 'selected' : ''}>${esc(t('hungarian'))}</option></select></div><div class="settings-links"><button class="text-link" data-action="jog" data-jog="terms">${esc(t('terms'))}</button><button class="text-link" data-action="jog" data-jog="privacy">${esc(t('privacy'))}</button></div><button class="secondary full" style="margin-top:14px" data-action="nevment">${esc(t('save'))}</button></section><section class="settings-section"><h3>Contacts</h3><p class="hint">Public keys and display names are stored locally in IndexedDB. They are not private-key material.</p>${contactRows}<label class="field-label" for="kontakt-név">Display name</label><input class="text-input" id="kontakt-név" maxlength="32"><label class="field-label" for="contact-pubkey">Public key</label><input class="text-input" id="contact-pubkey" maxlength="64" autocomplete="off"><button class="secondary full" data-action="add-contact">Add contact</button></section><section class="settings-section"><h3>Private key storage</h3><p class="hint">${esc(keyWarning)}</p><select class="select-input" id="key-mode"><option value="plain" ${keyMode === 'plain' ? 'selected' : ''}>Plaintext storage</option><option value="password" ${keyMode === 'password' ? 'selected' : ''}>Password protected</option></select><input class="text-input" id="key-password" type="password" autocomplete="new-password" placeholder="Use at least 10 characters" ${keyMode === 'password' ? '' : 'disabled'}><p class="hint">Current mode: ${esc(keyModeLabel)}</p><button class="secondary full" data-action="key-mode">Save key mode</button></section><section class="settings-section"><h3>${esc(t('relaySettings'))}</h3><p class="hint">${esc(t('relayHelp'))}</p><textarea class="text-area" id="relbe" rows="4">${esc(rel.join('\n'))}</textarea><button class="secondary full" data-action="relment">${esc(t('reconnect'))}</button></section><section class="settings-section"><h3>${esc(t('erase'))}</h3><p>${esc(t('eraseWarn'))}</p><button class="danger full" data-action="torol1">${esc(t('erase'))}</button></section></article></div>`;
-}
-function torolAblak(masodik = false) {
+  const keyWarning = keyMode === 'password' ? 'The private key is kept encrypted in IndexedDB and is unlocked only with the account password.' : 'The private key is stored in IndexedDB in plain form. It is not protected by a password.';
+  const contactRows = kontaktok.map(contact => `<div class="settings-row"><span><strong>${esc(contact.név)}</strong><small>${esc(contact.kód)}${contact.nyilvanos ? `  ·  ${esc(contact.nyilvanos)}` : ''}</small></span><div class="kontakt-actions"><button class="icon-btn" data-action="call-contact" data-contact-kód="${kimenetiBiztosít(contact.kód)}" aria-label="Call ${kimenetiBiztosít(contact.név)}">${jelek.marka}</button><button class="icon-btn" data-action="remove-contact" data-contact-id="${kimenetiBiztosít(contact.id)}" aria-label="Remove ${kimenetiBiztosít(contact.név)}">×</button></div></div>`).join('');
+  return `<div class="overlay"><article class="dialog"><div class="settings-head"><div><div class="eyebrow">${esc(t('account'))}</div><h2>${esc(t('settings'))}</h2></div><button class="icon-btn" data-action="megse" aria-label="${kimenetiBiztosít(üzenet('close'))}">×</button></div><section class="settings-section"><h3>${esc(t('account'))}</h3><label class="field-label" for="nevbe">${esc(t('display'))}</label><input class="text-input" id="nevbe" maxlength="32" value="${kimenetiBiztosít(fiok.név)}"><div class="settings-row"><span>${esc(t('language'))}</span><select id="nyelv"><option value="en" ${joNyelv === 'en' ? 'selected' : ''}>${esc(t('english'))}</option><option value="hu" ${joNyelv === 'hu' ? 'selected' : ''}>${esc(t('hungarian'))}</option></select></div><div class="settings-links"><button class="text-link" data-action="jog" data-jog="terms">${esc(t('terms'))}</button><button class="text-link" data-action="jog" data-jog="privacy">${esc(t('privacy'))}</button></div><button class="secondary full" style="margin-top:14px" data-action="nevment">${esc(t('save'))}</button></section><section class="settings-section"><h3>Contacts</h3><p class="hint">Calling codes are required. Public keys are optional, so a new contact can be saved without entering one.</p>${contactRows}<label class="field-label" for="kontakt-név">Display name</label><input class="text-input" id="kontakt-név" maxlength="32"><label class="field-label" for="kontakt-kód">Calling code</label><input class="text-input" id="kontakt-kód" maxlength="24" autocomplete="off"><label class="field-label" for="contact-pubkey">Public key (optional)</label><input class="text-input" id="contact-pubkey" maxlength="64" autocomplete="off"><button class="secondary full" data-action="add-contact">Add contact</button></section><section class="settings-section"><h3>Private key storage</h3><p class="hint">${esc(keyWarning)}</p><select class="select-input" id="key-mode"><option value="plain" ${keyMode === 'plain' ? 'selected' : ''}>Plaintext storage</option><option value="password" ${keyMode === 'password' ? 'selected' : ''}>Password protected</option></select><input class="text-input" id="key-password" type="password" autocomplete="new-password" placeholder="Enter a password of at least 10 characters"><input class="text-input" id="key-password-confirm" type="password" autocomplete="new-password" placeholder="Confirm the password"><button class="secondary full" data-action="save-key-mode">Save key protection</button></section><section class="settings-section"><h3>${esc(t('relaySettings'))}</h3><p class="hint">${esc(t('relayHelp'))}</p><textarea class="text-area" id="relbe" rows="4">${esc(rel.join('
+'))}</textarea><button class="secondary full" data-action="relment">${esc(t('reconnect'))}</button></section><section class="settings-section"><h3>${esc(t('erase'))}</h3><p class="hint">${esc(t('eraseWarn'))}</p><button class="danger full" data-action="reset-all">Reset all data</button></section></article></div>`;
+}function torolAblak(masodik = false) {
   return `<div class="overlay"><article class="dialog"><div class="eyebrow">${esc(t('erase'))}</div><h2>${esc(t(masodik ? 'eraseSecond' : 'eraseFirst'))}</h2>${masodik ? `<input class="text-input" id="torolmez" placeholder="${kimenetiBiztosít(üzenet('typeDelete'))}" autocomplete="off"><p class="form-hiba" id="hiba"></p>` : `<p>${esc(t('eraseWarn'))}</p>`}<div class="dialog-actions"><button class="secondary" data-action="torolmegse">${esc(t('cancel'))}</button><button class="danger" data-action="${masodik ? 'torolveg' : 'torol2'}">${esc(masodik ? t('deleteNow') : t('erase'))}</button></div></article></div>`;
 }
 function unlockAblak() {
@@ -428,12 +427,16 @@ function devices(tipus) {
 gyoker.addEventListener('submit', async e => {
   e.preventDefault();
   if (e.target.id === 'kezdo') {
-    const nev = new FormData(e.target).get('név')?.toString().trim() || '';
+    const formData = new FormData(e.target);
+    const nev = formData.get('név')?.toString().trim() || '';
+    const sajátKód = hívásKódNormalizálása(formData.get('saját-kód') || '');
     if (!nev) { hiba(t('badName')); return; }
+    if (sajátKód && !kódÉrvényes(sajátKód)) { hiba(t('invalidCode')); return; }
     if (!window.nostrEszkoz) { hiba(t('unavailable')); return; }
     const { generateSecretKey, getPublicKey } = window.nostrEszkoz;
     const titok = generateSecretKey();
-    fiok = { nyilvanos: getPublicKey(titok), nev, kod: újKód, nyelv, rel };
+    const kod = sajátKód || újKód;
+    fiok = { nyilvanos: getPublicKey(titok), nev, kod, nyelv, rel };
     const keyHex = bytesToHex(titok);
     keyMode = 'plain';
     keyRecord = { id: fiok.nyilvanos, mode: 'plain', keyHex };
@@ -477,30 +480,41 @@ gyoker.addEventListener('click', async e => {
   if (a === 'nemit' && hívás) { hívás.nemit = !hívás.nemit; hívás.stream?.getAudioTracks().forEach(x => { x.enabled = !hívás.nemit; }); render(); }
   if (a === 'siket' && hívás) { hívás.siket = !hívás.siket; render(); }
   if (a === 'eszkoz') devices(g.dataset.tipus);
-  if (a === 'key-mode') {
+  if (a === 'save-key-mode') {
     const mode = document.querySelector('#key-mode').value;
     const password = document.querySelector('#key-password').value;
+    const confirmation = document.querySelector('#key-password-confirm').value;
     try {
-      await setKeyMode(mode, password);
-      keyMode = mode;
+      await setKeyMode(mode, password, confirmation);
       g.textContent = t('saved');
       render();
     } catch (error) { hiba(error.message); }
   }
   if (a === 'add-contact') {
     const name = normalizeName(document.querySelector('#kontakt-név').value);
+    const code = hívásKódNormalizálása(document.querySelector('#kontakt-kód').value);
     const pubkey = document.querySelector('#contact-pubkey').value.trim().toLowerCase();
-    if (!name || !isValidPubkey(pubkey)) { hiba('Enter a valid name and 64-character public key.'); return; }
-    if (contactNameConflict(kontaktok, name) || contactExists(kontaktok, pubkey)) { hiba('A contact with this name or public key already exists.'); return; }
+    if (!name || !kódÉrvényes(code)) { hiba('Enter a valid name and calling code.'); return; }
+    if (pubkey && !isValidPubkey(pubkey)) { hiba('Enter a valid 64-character public key.'); return; }
+    if (contactNameConflict(kontaktok, name) || contactCodeExists(kontaktok, code) || (pubkey && contactExists(kontaktok, pubkey))) { hiba('A contact with this name, calling code, or public key already exists.'); return; }
     try {
-      kontaktok.push(makeContactRecord({ name, pubkey }));
+      kontaktok.push(makeContactRecord({ name, kód: code, nyilvanos: pubkey || null }));
       await saveContacts(kontaktok);
       render();
     } catch (error) { hiba(error.message); }
   }
   if (a === 'call-contact') {
-    const contact = kontaktok.find(item => item.pubkey === g.dataset.contactPubkey);
-    if (contact) { találat = { nev: contact.name, nyilvanos: contact.pubkey, kod: contact.pubkey.slice(0, 8).toUpperCase(), verified: true }; render(); }
+    const contact = kontaktok.find(item => item.kód === g.dataset.contactKód);
+    if (contact) {
+      if (contact.nyilvanos) {
+        találat = { nev: contact.név, nyilvanos: contact.nyilvanos, kod: contact.kód, verified: true };
+        render();
+      } else {
+        const found = await kodKeres(contact.kód);
+        if (found) { találat = found; render(); }
+        else { hiba(t('unknown')); }
+      }
+    }
   }
   if (a === 'remove-contact') {
     const id = g.dataset.contactId;
@@ -525,6 +539,20 @@ gyoker.addEventListener('click', async e => {
     if (!rel.length) rel = [...alapRel];
     fiok.rel = rel; ment(); kapcsol(); g.textContent = t('saved');
   }
+  if (a === 'reset-all') {
+    if (!window.confirm(t('eraseWarn'))) return;
+    const accountPubkey = fiok?.nyilvanos;
+    if (accountPubkey) await deleteKeyRecord(accountPubkey);
+    if (pool && aktivRelékek.length) pool.close(aktivRelékek);
+    clearKeyMemory();
+    await saveContacts([]);
+    localStorage.clear();
+    fiok = null;
+    hívás = null;
+    találat = null;
+    nézet = 'home';
+    window.location.reload();
+  }
   if (a === 'torol1') { nézet = 'torol1'; render(); }
   if (a === 'torol2') { nézet = 'torol2'; render(); }
   if (a === 'torolmegse') { nézet = 'settings'; render(); }
@@ -538,6 +566,7 @@ gyoker.addEventListener('click', async e => {
 
 gyoker.addEventListener('change', e => {
   if (e.target.id === 'nyelv') { nyelv = e.target.value; if (fiok) { fiok.nyelv = nyelv; ment(); } render(); }
+  if (e.target.id === 'key-mode') render();
 });
 
 async function indul() {

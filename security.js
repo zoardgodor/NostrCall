@@ -75,7 +75,13 @@ export async function kontaktokMentése(records) {
 
 export async function kontaktokBetöltése() {
   const tárolt = await adatLeránása(kontaktTároló, 'contacts');
-  return Array.isArray(tárolt?.records) ? tárolt.records : [];
+  if (!Array.isArray(tárolt?.records)) return [];
+  return tárolt.records.map(kontakt => {
+    if (kontakt.kód) return kontakt;
+    const nyilvanos = kontakt.nyilvanos?.trim().toLowerCase();
+    if (!nyilvanosÉrvényes(nyilvanos)) return kontakt;
+    return { ...kontakt, kód: nyilvanos.slice(0, 8).toUpperCase(), nyilvanos };
+  });
 }
 
 export function névNormalizálása(érték) {
@@ -237,9 +243,11 @@ export function bájtToHex(bájt) {
 
 export function kontaktFelvételLétrehozása(kontakt) {
   const név = névNormalizálása(kontakt.név);
+  const kód = hívásKódNormalizálása(kontakt.kód);
   const nyilvanos = kontakt.nyilvanos?.trim().toLowerCase();
-  if (!név || !nyilvanosÉrvényes(nyilvanos)) throw new Error('invalid-contact');
-  return { id: kontakt.id || crypto.randomUUID(), név, nyilvanos, jegyzet: String(kontakt.jegyzet || '').trim().slice(0, 500), createdAt: kontakt.createdAt || Math.floor(Date.now() / 1000), frissítve: Math.floor(Date.now() / 1000) };
+  if (!név || !kódÉrvényes(kód)) throw new Error('invalid-contact');
+  if (nyilvanos && !nyilvanosÉrvényes(nyilvanos)) throw new Error('invalid-contact');
+  return { id: kontakt.id || crypto.randomUUID(), név, kód, nyilvanos: nyilvanos || null, jegyzet: String(kontakt.jegyzet || '').trim().slice(0, 500), createdAt: kontakt.createdAt || Math.floor(Date.now() / 1000), frissítve: Math.floor(Date.now() / 1000) };
 }
 
 export function contactNameMatches(kontakt, név) {
@@ -254,12 +262,20 @@ export function contactExists(contacts, nyilvanos, ignoreId = null) {
   return kontaktLétezik(contacts, nyilvanos, ignoreId);
 }
 
+export function contactCodeExists(contacts, kód, ignoreId = null) {
+  return kontaktKódLétezik(contacts, kód, ignoreId);
+}
+
 export function makeContactRecord(contact) {
   return kontaktFelvételLétrehozása(contact);
 }
 
 export function kontaktLétezik(contacts, nyilvanos, ignoreId = null) {
   return contacts.some(kontakt => kontakt.nyilvanos === nyilvanos && kontakt.id !== ignoreId);
+}
+
+export function kontaktKódLétezik(contacts, kód, ignoreId = null) {
+  return contacts.some(kontakt => kontakt.kód === kód && kontakt.id !== ignoreId);
 }
 
 export function kontaktNévKonfliktusa(contacts, név, ignoreId = null) {
