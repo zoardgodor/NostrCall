@@ -61,7 +61,6 @@ let keyInMemory = null;
 let keyRecord = null;
 let dependencyCheck = false;
 let feldolgozottEsemények = new Set();
-let kapottHívásAzonosítók = new Set();
 let várakozóJelzés = new Map();
 
 function üzenet(k) { return üzenetek[nyelv]?.[k] || üzenetek.en[k] || k; }
@@ -178,9 +177,7 @@ async function bejovo(es) {
   } catch {}
 }
 async function jelKezel(peer, adat, callId, eventId) {
-  if (callId && kapottHívásAzonosítók.has(callId)) return;
   if (callId && hívás?.callId && hívás.callId !== callId) return;
-  if (callId) kapottHívásAzonosítók.add(callId);
 
   if (adat.tipus === 'jelolt' && (!hívás || adat.hívás !== hívás.id)) {
     const elozo = várakozóJelzés.get(adat.hívás);
