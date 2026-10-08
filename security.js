@@ -189,50 +189,6 @@ export function kódÉrvényes(érték) {
   return hívásKódÉrvényes(hívásKódNormalizálása(érték)) && hívásKódNormalizálása(érték).length >= 4;
 }
 
-export async function aesGcmTitkosítás(key, adat) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipher = await crypto.subtle.encrypt({ név: 'AES-GCM', iv }, key, adat);
-  return { iv: bájtToBase64(iv), adat: bájtToBase64(new Uint8Array(cipher)) };
-}
-
-export async function aesGcmTitkosításVisszaállítása(key, érték) {
-  const iv = base64ToBájt(érték.iv);
-  const adat = base64ToBájt(érték.adat);
-  return crypto.subtle.decrypt({ név: 'AES-GCM', iv }, key, adat);
-}
-
-export function bájtToBase64(bájt) {
-  let bináris = '';
-  for (const bájt of bájt) bináris += String.fromCharCode(bájt);
-  return btoa(bináris);
-}
-
-export function base64ToBájt(érték) {
-  const bináris = atob(érték);
-  return Uint8Array.from(bináris, character => character.charCodeAt(0));
-}
-
-export async function kulcsDeriválása(jelszó, só, iterations = 150000) {
-  const anyag = await crypto.subtle.importKey('raw', new TextEncoder().encode(jelszó), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.kulcsDeriválása({ név: 'PBKDF2', só, iterations, hash: 'SHA-256' }, anyag, { név: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-}
-
-export async function kulcsTitkosítása(privátKulcsHex, jelszó) {
-  const só = crypto.getRandomValues(new Uint8Array(16));
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await kulcsDeriválása(jelszó, só);
-  const titkosított = await crypto.subtle.encrypt({ név: 'AES-GCM', iv }, key, hexToBájt(privátKulcsHex));
-  return { version: 1, só: bájtToBase64(só), iv: bájtToBase64(iv), adat: bájtToBase64(new Uint8Array(titkosított)) };
-}
-
-export async function kulcsTitkosításVisszaállítása(felvétel, jelszó) {
-  const só = base64ToBájt(felvétel.só);
-  const iv = base64ToBájt(felvétel.iv);
-  const adat = base64ToBájt(felvétel.adat);
-  const key = await kulcsDeriválása(jelszó, só);
-  return bájtToHex(new Uint8Array(await crypto.subtle.decrypt({ név: 'AES-GCM', iv }, key, adat)));
-}
-
 export function hexToBájt(érték) {
   return Uint8Array.from(érték.match(/.{2}/g) || [], hex => parseInt(hex, 16));
 }
@@ -287,19 +243,6 @@ export function hasFreshProfile(esemény) {
   return frissProfilLétezik(esemény);
 }
 
-export function titkosítottEnvelopLétrehozása(adat, key) {
-  return aesGcmTitkosítás(key, new TextEncoder().encode(JSON.stringify(adat)));
-}
-
-export async function titkosítottEnvelopVisszaállítása(érték, key) {
-  const bájt = await aesGcmTitkosításVisszaállítása(key, érték);
-  return JSON.parse(new TextDecoder().decode(bájt));
-}
-
-export function fiókTárolóKulcsa(account) {
-  return `nostrcall-key-${account?.pubkey || 'legacy'}`;
-}
-
 export function frissProfilLétezik(esemény) {
   if (!esemény || !esemény.tags || !Array.isArray(esemény.tags)) return false;
   const lejárás = esemény.tags.find(([tag]) => tag === 'expiration')?.[1];
@@ -333,12 +276,4 @@ export function bytesToHex(bytes) {
 
 export function hexToBytes(value) {
   return hexToBájt(value);
-}
-
-export async function encryptKey(privateKeyHex, password) {
-  return kulcsTitkosítása(privateKeyHex, password);
-}
-
-export async function decryptKey(record, password) {
-  return kulcsTitkosításVisszaállítása(record, password);
 }

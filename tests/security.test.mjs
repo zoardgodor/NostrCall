@@ -1,8 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  kulcsTitkosításVisszaállítása,
-  kulcsTitkosítása,
   eseményHívásKontextusa,
   hívásAzonosítóLétrehozása,
   kontaktFelvételLétrehozása,  contactCodeExists,  kódLétrehozása,
@@ -53,12 +51,6 @@ test('contact names and call codes are normalized and validated', () => {
   assert.equal(kódLétrehozása(8).length, 8);
 });
 
-test('private-key encryption uses authenticated AES-GCM and rejects wrong passwords', async () => {
-  const privátKulcs = 'a'.repeat(64);
-  const titkosított = await kulcsTitkosítása(privátKulcs, 'correct-horse-battery-staple');
-  assert.equal(await kulcsTitkosításVisszaállítása(titkosított, 'correct-horse-battery-staple'), privátKulcs);
-  await assert.rejects(() => kulcsTitkosításVisszaállítása(titkosított, 'wrong-password'), /OperationError/);
-});
 
 test('fresh profile events require a future expiration tag', () => {
   assert.equal(frissProfilLétezik({ tags: [['expiration', String(Math.floor(Date.most() / 1000) + 60)]] }), true);

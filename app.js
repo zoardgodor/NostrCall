@@ -1,5 +1,5 @@
 ﻿import {
-  bytesToHex, contactCodeExists, contactExists, contactNameConflict, decryptKey, encryptKey, hexToBytes,
+  bytesToHex, contactCodeExists, contactExists, contactNameConflict, hexToBytes,
   hasFreshProfile, isValidPubkey, loadContacts, loadKeyRecord, makeCallId, makeContactRecord,
   normalizeName, saveContacts, saveKeyRecord, deleteKeyRecord, verifyCallEvent,
   kódLétrehozása, hívásKódNormalizálása, névNormalizálása, frissProfilLétezik,
@@ -58,10 +58,7 @@ let könyvtárHiba = false;
 let feliratás = null;
 let kontaktok = [];
 let keyInMemory = null;
-let keyPassword = '';
-let keyMode = 'plain';
 let keyRecord = null;
-let keyUnlockTimer = null;
 let dependencyCheck = false;
 let feldolgozottEsemények = new Set();
 let kapottHívásAzonosítók = new Set();
@@ -72,68 +69,25 @@ function t(k) { return üzenet(k); }
 function esc(v = '') { return kimenetiBiztosít(v); }
 function kimenetiBiztosít(v = '') { return String(v).replace(/[&<>"']/g, x => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[x]); }
 function veletlen() { return makeCallId(); }
-function ment() { localStorage.setItem(tarolo, JSON.stringify({ pubkey: fiok?.nyilvanos, nev: fiok?.nev, kod: fiok?.kod, nyelv: fiok?.nyelv, rel: fiok?.rel, keyMode, keyRecord: keyRecord?.id || null })); }
-function clearKeyMemory() {
-  keyInMemory = null;
-  keyPassword = '';
-  if (keyUnlockTimer) clearTimeout(keyUnlockTimer);
-  keyUnlockTimer = null;
+function accountData() { return { nyilvanos: fiok?.nyilvanos, nev: fiok?.nev, kod: fiok?.kod, nyelv: fiok?.nyelv, rel: fiok?.rel }; }
+async function ment() {
+  if (!fiok) return;
+  const account = accountData();
+  keyRecord = { id: fiok.nyilvanos, mode: 'plain', keyHex: bytesToHex(keyInMemory), account, updatedAt: Math.floor(Date.now() / 1000) };
+  await saveKeyRecord(fiok.nyilvanos, keyRecord);
+  localStorage.setItem(tarolo, JSON.stringify({ ...account, keyRecord: keyRecord.id }));
 }
-async function loadKey(keyModeToUse, password = '') {
-  clearKeyMemory();
-  if (keyModeToUse === 'plain') {
-    const stored = await loadKeyRecord(fiok.nyilvanos);
-    const keyHex = stored?.keyHex;
-    if (!keyHex) throw new Error('missing-key');
-    keyInMemory = hexToBytes(keyHex);
-    keyRecord = { id: fiok.nyilvanos, mode: 'plain', keyHex, updatedAt: Math.floor(Date.now() / 1000) };
-    return;
-  }
-  if (keyModeToUse !== 'password') throw new Error('unsupported-key-mode');
-  const stored = await loadKeyRecord(fiok.nyilvanos);
-  if (!stored?.encrypted || !password) throw new Error('missing-password');
-  const keyHex = await decryptKey(stored.encrypted, password);
+async function loadKey(stored = null) {
+  const record = stored || await loadKeyRecord(fiok.nyilvanos);
+  const keyHex = record?.keyHex;
+  if (!keyHex) throw new Error('missing-key');
   keyInMemory = hexToBytes(keyHex);
-  keyRecord = { ...stored, mode: 'password' };
-  keyPassword = password;
-  keyUnlockTimer = setTimeout(clearKeyMemory, 15 * 60 * 1000);
-  return;
-}
-async function migrateLegacyKey() {
-  const stored = localStorage.getItem(tarolo);
-  if (!stored) return false;
-  try {
-    const parsed = JSON.parse(stored);
-    if (!parsed?.titok || !isValidPubkey(parsed.nyilvanos)) return false;
-    await saveKeyRecord(parsed.nyilvanos, { mode: 'plain', keyHex: parsed.titok, migrated: true });
-    delete parsed.titok;
-    localStorage.setItem(tarolo, JSON.stringify(parsed));
-    return true;
-  } catch { return false; }
-}
-async function setKeyMode(mode, password = '', confirmation = '') {
-  if (!fiok || !keyInMemory) throw new Error('unlock-first');
-  if (mode === 'password') {
-    if (!password || password.length < 10) throw new Error('weak-password');
-    if (password !== confirmation) throw new Error('password-mismatch');
-    const encrypted = await encryptKey(bytesToHex(keyInMemory), password);
-    await saveKeyRecord(fiok.nyilvanos, { mode: 'password', encrypted });
-    keyRecord = { id: fiok.nyilvanos, mode: 'password', encrypted };
-    keyMode = 'password';
-  } else if (mode === 'plain') {
-    const keyHex = bytesToHex(keyInMemory);
-    await saveKeyRecord(fiok.nyilvanos, { mode: 'plain', keyHex });
-    keyRecord = { id: fiok.nyilvanos, mode: 'plain', keyHex };
-    keyMode = 'plain';
-  } else throw new Error('unsupported-key-mode');
-  clearKeyMemory();
-  await loadKey(keyMode, mode === 'password' ? password : '');
-  ment();
+  keyRecord = { ...record, mode: 'plain', updatedAt: Math.floor(Date.now() / 1000) };
 }
 async function deleteKey() {
   if (!fiok) return;
   await deleteKeyRecord(fiok.nyilvanos);
-  clearKeyMemory();
+  keyInMemory = null;
   fiok = null;
   localStorage.removeItem(tarolo);
   if (pool && aktivRelékek.length) pool.close(aktivRelékek);
@@ -202,7 +156,8 @@ async function kodKeres(kod) {
 async function bejovo(es) {
   if (es.pubkey === fiok?.nyilvanos || aláirtEsemények.has(es.id) || !window.nostrEszkoz || !keyInMemory || !window.nostrEszkoz.verifyEvent(es)) return;
   aláirtEsemények.add(es.id);
-  const context = verifyCallEvent(es, fiok.nyilvanos);
+    const expectedCallId = hívás?.id || null;
+    const context = verifyCallEvent(es, fiok.nyilvanos, expectedCallId);
   if (!context.valid || feldolgozottEsemények.has(es.id)) return;
   feldolgozottEsemények.add(es.id);
   try {
@@ -408,9 +363,6 @@ function talalatAblak() {
 }
 function beallitas() {
   const joNyelv = nyelv;
-  const keyWarning = keyMode === 'password'
-    ? 'The private key is kept encrypted in IndexedDB and is unlocked only with the account password.'
-    : 'The private key is stored in IndexedDB in plain form. It is not protected by a password.';
   const contactRows = kontaktok.map(contact => {
     const pubkey = contact.nyilvanos ? ' · ' + esc(contact.nyilvanos) : '';
     const safeName = kimenetiBiztosít(contact.név);
@@ -418,7 +370,6 @@ function beallitas() {
     const safeId = kimenetiBiztosít(contact.id);
     return '<div class="settings-row"><span><strong>' + esc(contact.név) + '</strong><small>' + esc(contact.kód) + pubkey + '</small></span><div class="kontakt-actions"><button class="icon-btn" data-action="call-contact" data-contact-kód="' + safeCode + '" aria-label="Call ' + safeName + '">' + jelek.marka + '</button><button class="icon-btn" data-action="remove-contact" data-contact-id="' + safeId + '" aria-label="Remove ' + safeName + '">×</button></div></div>';
   }).join('');
-  const keyOptions = '<option value="plain"' + (keyMode === 'plain' ? ' selected' : '') + '>Plain storage</option><option value="password"' + (keyMode === 'password' ? ' selected' : '') + '>Password-protected storage</option>';
   const languageOptions = '<option value="en"' + (joNyelv === 'en' ? ' selected' : '') + '>' + esc(t('english')) + '</option><option value="hu"' + (joNyelv === 'hu' ? ' selected' : '') + '>' + esc(t('hungarian')) + '</option>';
   return [
     '<div class="overlay"><article class="dialog"><div class="settings-head"><div><div class="eyebrow">',
@@ -445,11 +396,7 @@ function beallitas() {
     esc(t('save')),
     '</button></section><section class="settings-section"><h3>Contacts</h3><p class="hint">Calling codes are required. Public keys are optional, so a new contact can be saved without entering one.</p>',
     contactRows,
-    '<label class="field-label" for="kontakt-név">Display name</label><input class="text-input" id="kontakt-név" maxlength="32"><label class="field-label" for="kontakt-kód">Calling code</label><input class="text-input" id="kontakt-kód" maxlength="24" autocomplete="off"><label class="field-label" for="contact-pubkey">Public key (optional)</label><input class="text-input" id="contact-pubkey" maxlength="64" autocomplete="off"><button class="secondary full" data-action="add-contact">Add contact</button></section><section class="settings-section"><h3>Private key storage</h3><p class="hint">',
-    esc(keyWarning),
-    '</p><select class="select-input" id="key-mode">',
-    keyOptions,
-    '</select><input class="text-input" id="key-password" type="password" autocomplete="new-password" placeholder="Password"><input class="text-input" id="key-password-confirm" type="password" autocomplete="new-password" placeholder="Confirm password"><button class="secondary full" data-action="save-key-mode">Save key protection</button></section><section class="settings-section"><h3>',
+    '<label class="field-label" for="kontakt-név">Display name</label><input class="text-input" id="kontakt-név" maxlength="32"><label class="field-label" for="kontakt-kód">Calling code</label><input class="text-input" id="kontakt-kód" maxlength="24" autocomplete="off"><label class="field-label" for="contact-pubkey">Public key (optional)</label><input class="text-input" id="contact-pubkey" maxlength="64" autocomplete="off"><button class="secondary full" data-action="add-contact">Add contact</button></section><section class="settings-section"><h3>',
     esc(t('relaySettings')),
     '</h3><p class="hint">',
     esc(t('relayHelp')),
@@ -467,12 +414,9 @@ function beallitas() {
 function torolAblak(masodik = false) {
   return `<div class="overlay"><article class="dialog"><div class="eyebrow">${esc(t('erase'))}</div><h2>${esc(t(masodik ? 'eraseSecond' : 'eraseFirst'))}</h2>${masodik ? `<input class="text-input" id="torolmez" placeholder="${kimenetiBiztosít(üzenet('typeDelete'))}" autocomplete="off"><p class="form-hiba" id="hiba"></p>` : `<p>${esc(t('eraseWarn'))}</p>`}<div class="dialog-actions"><button class="secondary" data-action="torolmegse">${esc(t('cancel'))}</button><button class="danger" data-action="${masodik ? 'torolveg' : 'torol2'}">${esc(masodik ? t('deleteNow') : t('erase'))}</button></div></article></div>`;
 }
-function unlockAblak() {
-  return `<div class="overlay"><article class="dialog"><div class="settings-head"><div><div class="eyebrow">Private key</div><h2>Unlock account</h2></div></div><p class="hint">This account uses password-protected storage. Enter the password used when the key was protected.</p><input class="text-input" id="key-unlock-password" type="password" autocomplete="current-password" placeholder="Account password"><p class="form-hiba" id="hiba"></p><div class="dialog-actions"><button class="secondary" data-action="megse">Cancel</button><button class="primary" data-action="unlock">Unlock</button></div></article></div>`;
-}
 function render() {
   document.documentElement.lang = nyelv;
-  const modal = nézet === 'legal' ? jogNezet() : nézet === 'settings' ? beallitas() : nézet === 'unlock' ? unlockAblak() : nézet === 'torol1' ? torolAblak(false) : nézet === 'torol2' ? torolAblak(true) : hívás ? hivasAblak() : találat ? talalatAblak() : '';
+  const modal = nézet === 'legal' ? jogNezet() : nézet === 'settings' ? beallitas() : nézet === 'torol1' ? torolAblak(false) : nézet === 'torol2' ? torolAblak(true) : hívás ? hivasAblak() : találat ? talalatAblak() : '';
   gyoker.innerHTML = `${fejlec()}<main class="wrap main">${kezdolap()}</main>${modal}<audio id="hang" autoplay playsinline></audio>`;
   const audio = document.querySelector('#hang');
   if (audio && hangKép) { audio.srcObject = hangKép; audio.muted = Boolean(hívás?.siket); audio.play().catch(() => {}); }
@@ -514,18 +458,25 @@ gyoker.addEventListener('submit', async e => {
     const { generateSecretKey, getPublicKey } = window.nostrEszkoz;
     const titok = generateSecretKey();
     const kod = sajátKód || újKód;
-    fiok = { nyilvanos: getPublicKey(titok), nev, kod, nyelv, rel };
+    const account = { nyilvanos: getPublicKey(titok), nev, kod, nyelv, rel };
     const keyHex = bytesToHex(titok);
-    keyMode = 'plain';
-    keyRecord = { id: fiok.nyilvanos, mode: 'plain', keyHex };
-    await saveKeyRecord(fiok.nyilvanos, keyRecord);
+    const keyRecord = { id: account.nyilvanos, mode: 'plain', keyHex };
+    try {
+      await saveKeyRecord(account.nyilvanos, keyRecord);
+    } catch {
+      hiba(t('unavailable'));
+      return;
+    }
+    fiok = account;
     keyInMemory = titok;
-    ment();
+    await ment();
     nézet = 'home';
     render();
     kapcsol();
   } else if (e.target.id === 'keres') {
-    const kod = document.querySelector('#kod').value.trim().toUpperCase();
+    const kodInput = e.target.elements.namedItem('kód');
+    if (!kodInput) { hiba(t('invalidCode')); return; }
+    const kod = kodInput.value.trim().toUpperCase();
     if (kod.length < 4) { hiba(t('invalidCode')); return; }
     try {
       const tal = await kodKeres(kod);
@@ -558,16 +509,6 @@ gyoker.addEventListener('click', async e => {
   if (a === 'nemit' && hívás) { hívás.nemit = !hívás.nemit; hívás.stream?.getAudioTracks().forEach(x => { x.enabled = !hívás.nemit; }); render(); }
   if (a === 'siket' && hívás) { hívás.siket = !hívás.siket; render(); }
   if (a === 'eszkoz') devices(g.dataset.tipus);
-  if (a === 'save-key-mode') {
-    const mode = document.querySelector('#key-mode').value;
-    const password = document.querySelector('#key-password').value;
-    const confirmation = document.querySelector('#key-password-confirm').value;
-    try {
-      await setKeyMode(mode, password, confirmation);
-      g.textContent = t('saved');
-      render();
-    } catch (error) { hiba(error.message); }
-  }
   if (a === 'add-contact') {
     const name = normalizeName(document.querySelector('#kontakt-név').value);
     const code = hívásKódNormalizálása(document.querySelector('#kontakt-kód').value);
@@ -600,29 +541,22 @@ gyoker.addEventListener('click', async e => {
     await saveContacts(kontaktok);
     render();
   }
-  if (a === 'unlock') {
-    try {
-      await loadKey('password', document.querySelector('#key-unlock-password').value);
-      nézet = 'settings';
-      render();
-    } catch (error) { hiba(error.message); }
-  }
   if (a === 'nevment') {
     const nev = document.querySelector('#nevbe').value.trim();
     if (!nev) { hiba(t('badName')); return; }
-    fiok.nev = nev; fiok.nyelv = nyelv; ment(); profilEsemeny(); g.textContent = t('saved');
+    fiok.nev = nev; fiok.nyelv = nyelv; await ment(); profilEsemeny(); g.textContent = t('saved');
   }
   if (a === 'relment') {
     rel = [...new Set(document.querySelector('#relbe').value.split(/\r?\n/).map(x => x.trim()).filter(x => /^wss:\/\//i.test(x)))];
     if (!rel.length) rel = [...alapRel];
-    fiok.rel = rel; ment(); kapcsol(); g.textContent = t('saved');
+    fiok.rel = rel; await ment(); kapcsol(); g.textContent = t('saved');
   }
   if (a === 'reset-all') {
     if (!window.confirm(t('eraseWarn'))) return;
     const accountPubkey = fiok?.nyilvanos;
     if (accountPubkey) await deleteKeyRecord(accountPubkey);
     if (pool && aktivRelékek.length) pool.close(aktivRelékek);
-    clearKeyMemory();
+    keyInMemory = null;
     await saveContacts([]);
     localStorage.clear();
     fiok = null;
@@ -644,7 +578,6 @@ gyoker.addEventListener('click', async e => {
 
 gyoker.addEventListener('change', e => {
   if (e.target.id === 'nyelv') { nyelv = e.target.value; if (fiok) { fiok.nyelv = nyelv; ment(); } render(); }
-  if (e.target.id === 'key-mode') render();
 });
 
 async function indul() {
@@ -662,25 +595,16 @@ async function indul() {
       if (JSON.stringify(fiok.rel) === JSON.stringify(regiRel)) { rel = [...alapRel]; fiok.rel = rel; ment(); }
       else rel = Array.isArray(fiok.rel) && fiok.rel.length ? fiok.rel : [...alapRel];
       const stored = await loadKeyRecord(fiok.nyilvanos);
-      if (stored?.mode === 'password') {
-        keyMode = 'password';
-        keyRecord = stored;
-        nézet = 'unlock';
-      } else if (stored?.mode === 'plain') {
-        keyMode = 'plain';
-        keyRecord = stored;
-        await loadKey('plain');
+      if (!stored?.keyHex) {
+        fiok = null;
+        localStorage.removeItem(tarolo);
       } else {
-        const legacy = JSON.parse(localStorage.getItem(tarolo) || '{}');
-        if (legacy.titok) {
-          await migrateLegacyKey();
-          keyMode = 'plain';
-          keyRecord = await loadKeyRecord(fiok.nyilvanos);
-          await loadKey('plain');
-        } else {
-          keyMode = 'plain';
-          nézet = 'unlock';
+        const account = stored.account;
+        if (account?.nyilvanos === fiok.nyilvanos && account?.kod) {
+          fiok = { ...account, rel: Array.isArray(account.rel) && account.rel.length ? account.rel : [...alapRel] };
+          nyelv = fiok.nyelv === 'hu' ? 'hu' : 'en';
         }
+        await loadKey(stored);
       }
     }
   } catch { fiok = null; }
