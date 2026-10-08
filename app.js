@@ -28,7 +28,7 @@ const üzenetek = {
     calling: 'Calling', ringing: 'Ringing', connecting: 'Connecting', connected: 'Connected', busy: 'Busy', noanswer: 'No answer', rejected: 'Call declined', ended: 'Call ended', incoming: 'Incoming call', from: 'is calling you', accept: 'Accept', decline: 'Decline', hangup: 'End call', mute: 'Mute microphone', unmute: 'Unmute microphone', deafen: 'Silence audio', undeafen: 'Restore audio', input: 'Microphone', output: 'Speaker', quality: 'Connection quality',
     account: 'Account', save: 'Save changes', saved: 'Saved', display: 'Display name', language: 'Language', english: 'English', hungarian: 'Hungarian', relaySettings: 'Nostr relays', relayHelp: 'One secure WebSocket relay URL per line.', reconnect: 'Save and reconnect', erase: 'Delete account', eraseWarn: 'This permanently removes your local key and settings. Your published relay profile may remain until relays remove it.', eraseFirst: 'Delete this account?', eraseSecond: 'This cannot be undone. Type DELETE to confirm.', typeDelete: 'Type DELETE', deleteNow: 'Delete permanently', back: 'Back', close: 'Close', legal: 'Legal',
     termsTitle: 'Terms of Service', privacyTitle: 'Privacy Policy', lastUpdated: 'Last updated: October 6, 2026', termsP1: 'NostrCall is an experimental, peer-to-peer voice calling demo. By using it, you agree to use it lawfully and respectfully. You are responsible for the display name and calling code you share.', termsP2: 'Calls are not guaranteed to connect, remain private from your device or network provider, or be available at any time. Do not use NostrCall for emergency calls or for information whose loss or disclosure could cause harm.', termsP3: 'You are responsible for protecting access to your device and browser profile. Anyone with access to this browser storage may be able to use your account. Deleting the account removes its key from this browser but cannot recall events already distributed to relays.', termsP4: 'The software is provided as-is, without warranties or service-level commitments, to the extent permitted by law. These terms may be updated with the published application. Applicable mandatory consumer rights remain unaffected.', privacyP1: 'NostrCall has no application server and does not collect analytics. Your private key, display name, settings, and language choice are stored in this browser using local storage or IndexedDB. The private key is used locally to sign and encrypt Nostr events and is never intentionally sent to a relay.', privacyP2: 'Your short code, public key, and display name are published in a public Nostr event so other users can find you. Relay operators may store, copy, index, or disclose that event under their own policies. Anyone who knows your code can look up the public profile and try to call.', privacyP3: 'Call setup messages are encrypted between Nostr keys using NIP-44 v2. Relays can still observe event timing, size, and routing metadata. Voice media is sent directly between browsers with WebRTC, not through the Nostr relays. Your network may observe the peer connection. This demo does not include a TURN relay.', privacyP4: 'The browser asks for microphone permission only when you place or accept a call. Available device labels and selections are handled by the browser. Calls and incoming call alerts work only while the page is open and connected.', privacyP5: 'You can change your name, relay list, or language in Settings and delete the local account there. Clearing site data also removes the locally stored key. Public relay events may persist after either action. For questions, contact the person or organization that hosts this copy of the static site.',
-    micDenied: 'Microphone access was not granted. Check your browser permission.', callFail: 'Could not establish the call. Check microphone access and relay connectivity.', relayFail: 'Could not publish to a relay. Check the relay list and connection.', invalidCode: 'Enter a code with 4–24 letters or numbers.', badName: 'Enter a display name.', connectedHint: 'Peer-to-peer audio is active.', notSupported: 'Device selection is not supported by this browser.', noDevice: 'No audio device found.'
+    micDenied: 'Microphone access was not granted. Check your browser permission.', callFail: 'Could not establish the call. Check microphone access and relay connectivity.', relayFail: 'Could not publish to a relay. Check the relay list and connection.', invalidCode: 'Enter a code with 4–24 letters or numbers.', codeTaken: 'This calling code is already in use and cannot be used until the current profile expires.', codeCheckFailed: 'Could not check whether this calling code is available. Check your relay connection and try again.', badName: 'Enter a display name.', connectedHint: 'Peer-to-peer audio is active.', notSupported: 'Device selection is not supported by this browser.', noDevice: 'No audio device found.'
   },
   hu: {
     app: 'NostrCall', tag: 'HANGHÍVÁS NOSTR-RELÉKEN', homeTitle: 'Indíts privát hívást.', homeLead: 'Írd be annak a kódját, akit el szeretnél érni.', codeLabel: 'HÍVÁSKÓD', codePlaceholder: 'Például: 7K4Q9M', next: 'Tovább', yourCode: 'A TE HÍVÁSKÓD', copy: 'Másolás', copied: 'Kimásolva', settings: 'Beállítások', relays: 'kapcsolódó relé', unavailable: 'A Nostr-könyvtár nem érhető el. Ellenőrizd a kapcsolatot, majd töltsd újra az oldalt.',
@@ -37,7 +37,7 @@ const üzenetek = {
     calling: 'Hívás', ringing: 'Kicseng', connecting: 'Kapcsolódás', connected: 'Kapcsolódva', busy: 'Foglalt', noanswer: 'Nincs válasz', rejected: 'A hívást elutasították', ended: 'Hívás vége', incoming: 'Bejövő hívás', from: 'hív téged', accept: 'Elfogadás', decline: 'Elutasítás', hangup: 'Hívás befejezése', mute: 'Mikrofon némítása', unmute: 'Mikrofon bekapcsolása', deafen: 'Hang elnémítása', undeafen: 'Hang visszakapcsolása', input: 'Mikrofon', output: 'Hangszóró', quality: 'Kapcsolat minősége',
     account: 'Fiók', save: 'Mentés', saved: 'Mentve', display: 'Megjelenő név', language: 'Nyelv', english: 'Angol', hungarian: 'Magyar', relaySettings: 'Nostr-relék', relayHelp: 'Soronként egy biztonságos WebSocket-relé címe.', reconnect: 'Mentés és újracsatlakozás', erase: 'Fiók törlése', eraseWarn: 'Ez végleg törli a helyi kulcsot és beállításokat. A közzétett reléprofil a relékről még megmaradhat.', eraseFirst: 'Törlöd ezt a fiókot?', eraseSecond: 'Ez nem vonható vissza. A megerősítéshez írd be: DELETE.', typeDelete: 'Írd be: DELETE', deleteNow: 'Végleges törlés', back: 'Vissza', close: 'Bezárás', legal: 'Jogi információk',
     termsTitle: 'Felhasználási feltételek', privacyTitle: 'Adatvédelmi irányelvek', lastUpdated: 'Utolsó frissítés: 2026. október 6.', termsP1: 'A NostrCall egy kísérleti, közvetlen hanghívásra szolgáló bemutató. Használatával vállalod, hogy jogszerűen és másokat tiszteletben tartva használod. Te felelsz a megosztott megjelenő nevedért és híváskódodért.', termsP2: 'A hívás kapcsolódása, a készüléked és hálózati szolgáltatód előtti adatvédelem, illetve a szolgáltatás folyamatos elérhetősége nem garantált. Ne használd segélyhívásra, vagy olyan információhoz, amelynek elvesztése vagy nyilvánosságra kerülése kárt okozhat.', termsP3: 'Te felelsz a készüléked és böngészőprofilod védelméért. A böngészőtárhelyhez hozzáférő személy használhatja a fiókodat. A fiók törlése eltávolítja a kulcsot erről a böngészőről, de a relékre már továbbított eseményeket nem vonja vissza.', termsP4: 'A szoftver a jogszabályok által megengedett mértékig jelen állapotában, garancia és rendelkezésreállási vállalás nélkül használható. A feltételek a közzétett alkalmazással frissülhetnek. A kötelező fogyasztói jogokat ez nem érinti.', privacyP1: 'A NostrCallnak nincs alkalmazásszervere, és nem gyűjt analitikai adatokat. A privát kulcs, a megjelenő név, a beállítások és a nyelv a böngésző helyi tárhelyén vagy IndexedDB-ben maradnak. A privát kulcsot az alkalmazás helyben használja Nostr-események aláírására és titkosítására; szándékosan nem küldi relére.', privacyP2: 'A rövid kód, a nyilvános kulcs és a megjelenő név nyilvános Nostr-eseményként kerül ki, hogy mások megtalálhassanak. A relé üzemeltetője a saját szabályai szerint tárolhatja, másolhatja, indexelheti vagy közzéteheti az eseményt. A kód ismeretében bárki megkeresheti a nyilvános profilt és hívást kezdeményezhet.', privacyP3: 'A hívásjelzés NIP-44 v2 szerint titkosítva halad a Nostr-kulcsok között. A relék ettől még láthatják az események időpontját, méretét és útválasztási adatait. A hang WebRTC-vel közvetlenül a böngészők között utazik, nem a Nostr-reléken. A hálózatod láthatja a partnerkapcsolatot. Ez a bemutató nem használ TURN-relét.', privacyP4: 'A böngésző csak hívás indításakor vagy fogadásakor kér mikrofonengedélyt. Az eszközneveket és választásokat a böngésző kezeli. A hívás és a bejövő hívásjelzés csak nyitott, kapcsolódó oldal mellett működik.', privacyP5: 'A nevedet, reléidet és a nyelvet a Beállításokban módosíthatod, a helyi fiókot pedig ott törölheted. A webhelyadatok törlése szintén eltávolítja a helyben tárolt kulcsot. A nyilvános reléesemények mindkét esetben megmaradhatnak. Kérdés esetén keresd a statikus oldal üzemeltetőjét.',
-    micDenied: 'Nem kaptunk hozzáférést a mikrofonhoz. Ellenőrizd a böngésző engedélyeit.', callFail: 'Nem sikerült létrehozni a hívást. Ellenőrizd a mikrofon engedélyét és a relékapcsolatot.', relayFail: 'Nem sikerült relére közzétenni. Ellenőrizd a relélistát és a kapcsolatot.', invalidCode: 'Legalább 4 karakteres kódot adj meg.', badName: 'Adj meg egy nevet.', connectedHint: 'A közvetlen hangkapcsolat aktív.', notSupported: 'A böngésző nem támogatja az eszközválasztást.', noDevice: 'Nem található hangeszköz.'
+    micDenied: 'Nem kaptunk hozzáférést a mikrofonhoz. Ellenőrizd a böngésző engedélyeit.', callFail: 'Nem sikerült létrehozni a hívást. Ellenőrizd a mikrofon engedélyét és a relékapcsolatot.', relayFail: 'Nem sikerült relére közzétenni. Ellenőrizd a relélistát és a kapcsolatot.', invalidCode: 'Legalább 4 karakteres kódot adj meg.', codeTaken: 'Ezt a híváskódot már használja valaki; a jelenlegi profil lejártáig nem használható.', codeCheckFailed: 'Nem sikerült ellenőrizni, hogy szabad-e a híváskód. Ellenőrizd a relékapcsolatot, majd próbáld újra.', badName: 'Adj meg egy nevet.', connectedHint: 'A közvetlen hangkapcsolat aktív.', notSupported: 'A böngésző nem támogatja az eszközválasztást.', noDevice: 'Nem található hangeszköz.'
   }
 };
 
@@ -149,6 +149,7 @@ async function esemény(kulcs, cel, tipus, adat) {
   const es = finalizeEvent({ kind: 25050, created_at: Math.floor(Date.now() / 1000), tags: [['p', cel], ['t', 'nostrcall'], ['call', kulcs], ['message', veletlen()]], content: tart }, keyInMemory);
   if (!verifyEvent(es)) throw new Error('invalid-signing-event');
   await Promise.any(pool.publish(rel, es));
+  console.info('[NostrCall] Signal published:', tipus);
 }
 async function kodKeres(kod) {
   if (!pool || !window.nostrEszkoz?.verifyEvent) throw new Error('nostr');
@@ -175,8 +176,9 @@ async function bejovo(es) {
     const conversationKey = nip44.getConversationKey(keyInMemory, context.context.sender);
     const adat = JSON.parse(nip44.decrypt(es.content, conversationKey));
     if (!adat?.tipus || !adat.hívás || adat.hívás !== context.context.hívásAzonosító || !isValidPubkey(context.context.sender)) return;
+    console.info('[NostrCall] Signal received:', adat.tipus);
     await jelKezel(context.context.sender, adat, context.context.hívásAzonosító, es.id);
-  } catch {}
+  } catch (error) { console.warn('[NostrCall] Signal handling failed:', error); }
 }
 async function jelKezel(peer, adat, callId, eventId) {
   if (['nincsvalasz', 'elutasit', 'foglalt', 'befejez'].includes(adat.tipus)) {
@@ -258,7 +260,13 @@ async function pcLetrehoz() {
     'stun:stun4.l.google.com:19302'
   ] }] });
   hc.getTracks().forEach(s => hívás.pc.addTrack(s, hc));
-  hívás.pc.onicecandidate = e => { if (e.candidate && hívás) esemény(hívás.id, hívás.peer, 'jelolt', { hívás: hívás.id, jelolt: e.candidate.toJSON() }); };
+  hívás.pc.onicecandidate = e => {
+    if (!e.candidate || !hívás) return;
+    esemény(hívás.id, hívás.peer, 'jelolt', { hívás: hívás.id, jelolt: e.candidate.toJSON() }).catch(error => console.warn('[NostrCall] ICE candidate publish failed:', error));
+  };
+  hívás.pc.oniceconnectionstatechange = () => console.info('[NostrCall] ICE state:', hívás?.pc?.iceConnectionState);
+  hívás.pc.onicegatheringstatechange = () => console.info('[NostrCall] ICE gathering:', hívás?.pc?.iceGatheringState);
+  hívás.pc.onicecandidateerror = e => console.warn('[NostrCall] ICE candidate error:', e.errorCode, e.errorText, e.url);
   hívás.pc.ontrack = e => {
     hangKép = e.streams[0];
     if (hívás) { clearTimeout(hívás.ido); hívás.ido = null; hívás.tavoli = hangKép; hívás.allapot = 'kapcsolodva'; render(); }
@@ -266,6 +274,7 @@ async function pcLetrehoz() {
   hívás.pc.onconnectionstatechange = () => {
     if (!hívás?.pc) return;
     const all = hívás.pc.connectionState;
+    console.info('[NostrCall] Peer connection state:', all);
     if (all === 'connected') { clearTimeout(hívás.ido); hívás.ido = null; hívás.allapot = 'kapcsolodva'; hívás.minoseg = 'good'; }
     else if (all === 'failed') { hivasLezar('vege', false); hiba(t('callFail')); return; }
     else if (all === 'closed') return;
@@ -277,7 +286,17 @@ async function pcLetrehoz() {
     try {
       const adatok = await hívás.pc.getStats();
       let rtt = null;
-      adatok.forEach(x => { if (x.type === 'candidate-pair' && x.state === 'succeeded' && (x.selected || x.nominated)) rtt = x.currentRoundTripTime; });
+      adatok.forEach(x => {
+        if (x.type !== 'candidate-pair' || x.state !== 'succeeded' || !(x.selected || x.nominated)) return;
+        rtt = x.currentRoundTripTime;
+        const local = adatok.get(x.localCandidateId);
+        const remote = adatok.get(x.remoteCandidateId);
+        const path = `${local?.candidateType || 'unknown'}-${remote?.candidateType || 'unknown'}`;
+        if (hívás.icePath !== path) {
+          hívás.icePath = path;
+          console.info('[NostrCall] Selected ICE path:', local?.candidateType, 'to', remote?.candidateType);
+        }
+      });
       const min = rtt === null ? 'mid' : rtt < 0.18 ? 'good' : rtt < 0.4 ? 'mid' : 'bad';
       if (hívás && hívás.minoseg !== min) {
         hívás.minoseg = min;
@@ -311,7 +330,8 @@ async function hiv(ind, nev) {
     await hívás.pc.setLocalDescription(ajanlat);
     await esemény(hívás.id, ind, 'ajanlat', { hívás: hívás.id, nev: fiok.nev, sdp: hívás.pc.localDescription });
     if (hívás) { hívás.allapot = 'cseng'; render(); }
-  } catch {
+  } catch (error) {
+    console.warn('[NostrCall] Outgoing call setup failed:', error);
     hivasLezar('vege', false);
     hiba(t('callFail'));
   }
@@ -329,7 +349,8 @@ async function fogad() {
     await esemény(hívás.id, hívás.peer, 'valasz', { hívás: hívás.id, sdp: hívás.pc.localDescription });
     idoLejar(30000);
     render();
-  } catch {
+  } catch (error) {
+    console.warn('[NostrCall] Incoming call setup failed:', error);
     hivasLezar('vege', true);
     hiba(t('callFail'));
   }
@@ -353,7 +374,7 @@ function hivasLezar(allapot, kuld) {
 }
 function minosegRajz() {
   let oszt = hívás?.minoseg || (hívás?.pc?.connectionState === 'connected' ? 'good' : 'mid');
-  return `<span class="quality ${osztály}" aria-label="${kimenetiBiztosít(üzenet('quality'))}"><i></i><i></i><i></i></span>`;
+  return `<span class="quality ${oszt}" aria-label="${kimenetiBiztosít(üzenet('quality'))}"><i></i><i></i><i></i></span>`;
 }
 function kodDoboz(kod, feliratKod) {
   return `<div class="code-box"><span class="code-text">${esc(kod)}</span><button class="copy-btn" data-action="masol" data-kod="${kimenetiBiztosít(kod)}">${esc(t('copy'))}</button></div>`;
@@ -481,9 +502,29 @@ gyoker.addEventListener('submit', async e => {
     if (!nev) { hiba(t('badName')); return; }
     if (sajátKód && !kódÉrvényes(sajátKód)) { hiba(t('invalidCode')); return; }
     if (!window.nostrEszkoz) { hiba(t('unavailable')); return; }
+    let kod = sajátKód || újKód;
+    try {
+      await Promise.allSettled(rel.map(cim => pool.ensureRelay(cim)));
+      if (![...(pool?.listConnectionStatus?.().values() || [])].some(Boolean)) {
+        hiba(t('codeCheckFailed'));
+        return;
+      }
+      let foglalt = await kodKeres(kod);
+      if (sajátKód && foglalt) { hiba(t('codeTaken')); return; }
+      let probalkozas = 0;
+      while (foglalt && probalkozas < 5) {
+        kod = kódLétrehozása(8);
+        foglalt = await kodKeres(kod);
+        probalkozas++;
+      }
+      if (foglalt) { hiba(t('codeCheckFailed')); return; }
+    } catch {
+      hiba(t('codeCheckFailed'));
+      return;
+    }
+    if (!sajátKód) újKód = kod;
     const { generateSecretKey, getPublicKey } = window.nostrEszkoz;
     const titok = generateSecretKey();
-    const kod = sajátKód || újKód;
     const account = { nyilvanos: getPublicKey(titok), nev, kod, nyelv, rel };
     const keyHex = bytesToHex(titok);
     const keyRecord = { id: account.nyilvanos, mode: 'plain', keyHex };
