@@ -15,7 +15,7 @@ const nyilvanos = 'a'.repeat(64);
 const hívásAzonosító = 'b'.repeat(32);
 const esemény = {
   id: 'b'.repeat(64),
-  nyilvanos,
+  pubkey: nyilvanos,
   created_at: Math.floor(Date.now() / 1000),
   tags: [['p', 'c'.repeat(64)], ['call', hívásAzonosító], ['message', 'msg-1']],
   content: 'encrypted'

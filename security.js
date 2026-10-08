@@ -114,9 +114,9 @@ export function hívásKódÉrvényes(érték) {
 
 export function eseményÉrvényesítése(esemény, expectedPubkey = null) {
   if (!esemény || typeof esemény !== 'object') return false;
-  if (!nyilvanosÉrvényes(esemény.nyilvanos) || !nyilvanosÉrvényes(esemény.id) || typeof esemény.content !== 'string') return false;
+  if (!nyilvanosÉrvényes(esemény.pubkey) || !nyilvanosÉrvényes(esemény.id) || typeof esemény.content !== 'string') return false;
   if (!Number.isFinite(esemény.created_at) || !Array.isArray(esemény.tags)) return false;
-  if (expectedPubkey && esemény.nyilvanos !== expectedPubkey) return false;
+  if (expectedPubkey && esemény.pubkey !== expectedPubkey) return false;
   const most = Math.floor(Date.now() / 1000);
   if (esemény.created_at < most - MAX_EVENT_AGE || esemény.created_at > most + MAX_EVENT_FUTURE) return false;
   return true;
@@ -124,7 +124,7 @@ export function eseményÉrvényesítése(esemény, expectedPubkey = null) {
 
 export function eseményHívásKontextusa(esemény, hívásAzonosító, senderPubkey, recipientPubkey) {
   if (!eseményÉrvényesítése(esemény)) return false;
-  if (!hívásAzonosítóÉrvényes(hívásAzonosító) || esemény.nyilvanos !== senderPubkey) return false;
+  if (!hívásAzonosítóÉrvényes(hívásAzonosító) || esemény.pubkey !== senderPubkey) return false;
   const hívásCímkék = esemény.tags.filter(([tag]) => tag === 'call');
   if (hívásCímkék.length && !hívásCímkék.some(([, érték]) => érték === hívásAzonosító)) return false;
   const címkék = esemény.tags.filter(([tag]) => tag === 'p');
@@ -144,13 +144,13 @@ export function hívásKontextusLeránása(esemény) {
   const hívásAzonosító = címkeLeránása(esemény, 'call');
   const üzenetAzonosító = címkeLeránása(esemény, 'message');
   const type = címkeLeránása(esemény, 'type');
-  const sender = esemény?.nyilvanos;
+  const sender = esemény?.pubkey;
   const címzett = címkeLeránása(esemény, 'p');
   return { hívásAzonosító, üzenetAzonosító, type, sender, címzett };
 }
 
 export function validateCallEvent(esemény, helyiNyilvanos, vártHívásAzonosító = null) {
-  if (!eseményÉrvényesítése(esemény, esemény.nyilvanos)) return { valid: false, ok: 'invalid-event' };
+  if (!eseményÉrvényesítése(esemény, esemény.pubkey)) return { valid: false, ok: 'invalid-event' };
   const kontextus = hívásKontextusLeránása(esemény);
   if (!kontextus.hívásAzonosító || !hívásAzonosítóÉrvényes(kontextus.hívásAzonosító)) return { valid: false, ok: 'invalid-call-id' };
   if (vártHívásAzonosító && kontextus.hívásAzonosító !== vártHívásAzonosító) return { valid: false, ok: 'wrong-call-id' };

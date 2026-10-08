@@ -174,7 +174,7 @@ async function bejovo(es) {
     const conversationKey = nip44.getConversationKey(keyInMemory, context.context.sender);
     const adat = JSON.parse(nip44.decrypt(es.content, conversationKey));
     if (!adat?.tipus || !adat.hívás || !isValidPubkey(context.context.sender)) return;
-    await jelKezel(context.context.sender, adat, context.context.callId, es.id);
+    await jelKezel(context.context.sender, adat, context.context.hívásAzonosító, es.id);
   } catch {}
 }
 async function jelKezel(peer, adat, callId, eventId) {
