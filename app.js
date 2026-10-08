@@ -9,6 +9,7 @@
 const alkalmazás = document.querySelector('#app');
 const gyoker = alkalmazás;
 const tároló = 'nostrcall-fiok-v1';
+const lezártHívásTároló = 'nostrcall-lezart-hivasok-v1';
 const alapRelékek = ['wss://relay.primal.net', 'wss://nos.lol', 'wss://relay.damus.io'];
 const ikonok = {
   ember: '<svg class="avatar-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor"/><circle cx="12" cy="9" r="3" fill="none" stroke="currentColor"/><path d="M5.5 18.5c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="none" stroke="currentColor" stroke-linecap="round"/></svg>',
@@ -61,6 +62,7 @@ let keyInMemory = null;
 let keyRecord = null;
 let dependencyCheck = false;
 let feldolgozottEsemények = new Set();
+let lezártHívások = new Set();
 let várakozóJelzés = new Map();
 
 function üzenet(k) { return üzenetek[nyelv]?.[k] || üzenetek.en[k] || k; }
@@ -172,11 +174,21 @@ async function bejovo(es) {
     const { nip44 } = window.nostrEszkoz;
     const conversationKey = nip44.getConversationKey(keyInMemory, context.context.sender);
     const adat = JSON.parse(nip44.decrypt(es.content, conversationKey));
-    if (!adat?.tipus || !adat.hívás || !isValidPubkey(context.context.sender)) return;
+    if (!adat?.tipus || !adat.hívás || adat.hívás !== context.context.hívásAzonosító || !isValidPubkey(context.context.sender)) return;
     await jelKezel(context.context.sender, adat, context.context.hívásAzonosító, es.id);
   } catch {}
 }
 async function jelKezel(peer, adat, callId, eventId) {
+  if (['nincsvalasz', 'elutasit', 'foglalt', 'befejez'].includes(adat.tipus)) {
+    lezártHívások.add(adat.hívás);
+    lezártHívások = new Set([...lezártHívások].slice(-100));
+    localStorage.setItem(lezártHívásTároló, JSON.stringify([...lezártHívások]));
+    if (hívás?.id === adat.hívás && peer === hívás.peer) {
+      hivasLezar(adat.tipus === 'nincsvalasz' ? 'nincsvalasz' : adat.tipus === 'elutasit' ? 'elutasitva' : adat.tipus === 'foglalt' ? 'foglalt' : 'vege', false);
+    }
+    return;
+  }
+  if (adat.tipus === 'ajanlat' && lezártHívások.has(adat.hívás)) return;
   if (callId && hívás?.callId && hívás.callId !== callId) return;
 
   if (adat.tipus === 'jelolt' && (!hívás || adat.hívás !== hívás.id)) {
@@ -220,8 +232,8 @@ async function jelKezel(peer, adat, callId, eventId) {
   } else if (!hívás || adat.hívás !== hívás.id || peer !== hívás.peer) {
     return;
   } else if (adat.tipus === 'valasz' && hívás.irany === 'kimeno') {
-    clearTimeout(hívás.ido);
     hívás.allapot = 'kapcsolodas';
+    idoLejar(30000);
     await hívás.pc.setRemoteDescription(adat.sdp);
     await jelSor();
     render();
@@ -229,14 +241,6 @@ async function jelKezel(peer, adat, callId, eventId) {
     const jelolt = new RTCIceCandidate(adat.jelolt);
     if (hívás.pc?.remoteDescription) await hívás.pc.addIceCandidate(jelolt);
     else hívás.zar.push(jelolt);
-  } else if (adat.tipus === 'nincsvalasz') {
-    hivasLezar('nincsvalasz', false);
-  } else if (adat.tipus === 'elutasit') {
-    hivasLezar('elutasitva', false);
-  } else if (adat.tipus === 'foglalt') {
-    hivasLezar('foglalt', false);
-  } else if (adat.tipus === 'befejez') {
-    hivasLezar('vege', false);
   }
 }
 async function jelSor() {
@@ -246,18 +250,25 @@ async function jelSor() {
 async function pcLetrehoz() {
   const hc = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
   hívás.stream = hc;
-  hívás.pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  hívás.pc = new RTCPeerConnection({ iceServers: [{ urls: [
+    'stun:stun.l.google.com:19302',
+    'stun:stun1.l.google.com:19302',
+    'stun:stun2.l.google.com:19302',
+    'stun:stun3.l.google.com:19302',
+    'stun:stun4.l.google.com:19302'
+  ] }] });
   hc.getTracks().forEach(s => hívás.pc.addTrack(s, hc));
   hívás.pc.onicecandidate = e => { if (e.candidate && hívás) esemény(hívás.id, hívás.peer, 'jelolt', { hívás: hívás.id, jelolt: e.candidate.toJSON() }); };
   hívás.pc.ontrack = e => {
     hangKép = e.streams[0];
-    if (hívás) { hívás.tavoli = hangKép; hívás.allapot = 'kapcsolodva'; render(); }
+    if (hívás) { clearTimeout(hívás.ido); hívás.ido = null; hívás.tavoli = hangKép; hívás.allapot = 'kapcsolodva'; render(); }
   };
   hívás.pc.onconnectionstatechange = () => {
     if (!hívás?.pc) return;
     const all = hívás.pc.connectionState;
-    if (all === 'connected') { hívás.allapot = 'kapcsolodva'; hívás.minoseg = 'good'; }
-    else if (all === 'failed' || all === 'closed') { if (all === 'failed') hivasLezar('vege', false); }
+    if (all === 'connected') { clearTimeout(hívás.ido); hívás.ido = null; hívás.allapot = 'kapcsolodva'; hívás.minoseg = 'good'; }
+    else if (all === 'failed') { hivasLezar('vege', false); hiba(t('callFail')); return; }
+    else if (all === 'closed') return;
     else if (all === 'disconnected' && hívás.allapot === 'kapcsolodva') hívás.minoseg = 'bad';
     render();
   };
@@ -280,6 +291,11 @@ function idoLejar(ms) {
   if (hívás.ido) clearTimeout(hívás.ido);
   hívás.ido = setTimeout(() => {
     if (!hívás) return;
+    if (hívás.allapot === 'kapcsolodas') {
+      hivasLezar('vege', false);
+      hiba(t('callFail'));
+      return;
+    }
     if (hívás.irany === 'kimeno' && ['hívás', 'cseng', 'kapcsolodas'].includes(hívás.allapot)) esemény(hívás.id, hívás.peer, 'nincsvalasz', { hívás: hívás.id }).catch(() => {});
     hivasLezar('nincsvalasz', false);
   }, ms);
@@ -311,6 +327,7 @@ async function fogad() {
     await hívás.pc.setLocalDescription(val);
     hívás.allapot = 'kapcsolodas';
     await esemény(hívás.id, hívás.peer, 'valasz', { hívás: hívás.id, sdp: hívás.pc.localDescription });
+    idoLejar(30000);
     render();
   } catch {
     hivasLezar('vege', true);
@@ -320,6 +337,9 @@ async function fogad() {
 function hivasLezar(allapot, kuld) {
   if (!hívás) return;
   const regi = hívás;
+  lezártHívások.add(regi.id);
+  lezártHívások = new Set([...lezártHívások].slice(-100));
+  localStorage.setItem(lezártHívásTároló, JSON.stringify([...lezártHívások]));
   clearTimeout(regi.ido);
   clearInterval(regi.statisztika);
   if (kuld && pool) esemény(regi.id, regi.peer, 'befejez', { hívás: regi.id }).catch(() => {});
@@ -587,6 +607,10 @@ gyoker.addEventListener('change', e => {
 });
 
 async function indul() {
+  try {
+    const lezárt = JSON.parse(localStorage.getItem(lezártHívásTároló) || '[]');
+    if (Array.isArray(lezárt)) lezártHívások = new Set(lezárt.filter(id => typeof id === 'string'));
+  } catch {}
   try {
     const n = await import('https://esm.sh/nostr-tools@2.10.4?bundle');
     window.nostrEszkoz = n;
