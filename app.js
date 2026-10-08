@@ -213,9 +213,12 @@ async function bejovo(es) {
     await jelKezel(context.context.sender, adat, context.context.callId, es.id);
   } catch {}
 }
-async function jelKezel(peer, adat, callId, eventId) {  if (callId && kapottHívásAzonosítók.has(callId)) return;
+async function jelKezel(peer, adat, callId, eventId) {
+  if (callId && kapottHívásAzonosítók.has(callId)) return;
   if (callId && hívás?.callId && hívás.callId !== callId) return;
-  if (callId) kapottHívásAzonosítók.add(callId);  if (adat.tipus === 'jelolt' && (!hívás || adat.hívás !== hívás.id)) {
+  if (callId) kapottHívásAzonosítók.add(callId);
+
+  if (adat.tipus === 'jelolt' && (!hívás || adat.hívás !== hívás.id)) {
     const elozo = várakozóJelzés.get(adat.hívás);
     if (!elozo || elozo.peer === peer) {
       const lista = elozo?.lista || [];
@@ -225,6 +228,7 @@ async function jelKezel(peer, adat, callId, eventId) {  if (callId && kapottHív
     }
     return;
   }
+
   if (adat.tipus === 'ajanlat') {
     if (hívás) {
       await esemény(adat.hívás, peer, 'foglalt', { hívás: adat.hívás });
@@ -233,11 +237,28 @@ async function jelKezel(peer, adat, callId, eventId) {  if (callId && kapottHív
     const elozo = várakozóJelzés.get(adat.hívás);
     const jeloltek = elozo?.peer === peer ? elozo.lista.map(x => new RTCIceCandidate(x)) : [];
     várakozóJelzés.delete(adat.hívás);
-    hívás = { id: adat.hívás, peer, nev: adat.nev || 'Nostr user', irany: 'bejovo', allapot: 'bejovo', ajanlat: adat.sdp, pc: null, stream: null, tavoli: null, zar: jeloltek, nemit: false, siket: false, callId, eventId, verified: true };
+    hívás = {
+      id: adat.hívás,
+      peer,
+      nev: adat.nev || 'Nostr user',
+      irany: 'bejovo',
+      allapot: 'bejovo',
+      ajanlat: adat.sdp,
+      pc: null,
+      stream: null,
+      tavoli: null,
+      zar: jeloltek,
+      nemit: false,
+      siket: false,
+      callId,
+      eventId,
+      verified: true
+    };
     idoLejar(45000);
     render();
-  } else if (!hívás || adat.hívás !== hívás.id || peer !== hívás.peer) return;
-  else if (adat.tipus === 'valasz' && hívás.irany === 'kimeno') {
+  } else if (!hívás || adat.hívás !== hívás.id || peer !== hívás.peer) {
+    return;
+  } else if (adat.tipus === 'valasz' && hívás.irany === 'kimeno') {
     clearTimeout(hívás.ido);
     hívás.allapot = 'kapcsolodas';
     await hívás.pc.setRemoteDescription(adat.sdp);
@@ -247,10 +268,15 @@ async function jelKezel(peer, adat, callId, eventId) {  if (callId && kapottHív
     const jelolt = new RTCIceCandidate(adat.jelolt);
     if (hívás.pc?.remoteDescription) await hívás.pc.addIceCandidate(jelolt);
     else hívás.zar.push(jelolt);
-  } else if (adat.tipus === 'nincsvalasz') hivasLezar('nincsvalasz', false);
-  else if (adat.tipus === 'elutasit') hivasLezar('elutasitva', false);
-  else if (adat.tipus === 'foglalt') hivasLezar('foglalt', false);
-  else if (adat.tipus === 'befejez') hivasLezar('vege', false);
+  } else if (adat.tipus === 'nincsvalasz') {
+    hivasLezar('nincsvalasz', false);
+  } else if (adat.tipus === 'elutasit') {
+    hivasLezar('elutasitva', false);
+  } else if (adat.tipus === 'foglalt') {
+    hivasLezar('foglalt', false);
+  } else if (adat.tipus === 'befejez') {
+    hivasLezar('vege', false);
+  }
 }
 async function jelSor() {
   if (!hívás?.pc || !hívás.zar.length) return;
@@ -382,11 +408,63 @@ function talalatAblak() {
 }
 function beallitas() {
   const joNyelv = nyelv;
-  const keyWarning = keyMode === 'password' ? 'The private key is kept encrypted in IndexedDB and is unlocked only with the account password.' : 'The private key is stored in IndexedDB in plain form. It is not protected by a password.';
-  const contactRows = kontaktok.map(contact => `<div class="settings-row"><span><strong>${esc(contact.név)}</strong><small>${esc(contact.kód)}${contact.nyilvanos ? `  ·  ${esc(contact.nyilvanos)}` : ''}</small></span><div class="kontakt-actions"><button class="icon-btn" data-action="call-contact" data-contact-kód="${kimenetiBiztosít(contact.kód)}" aria-label="Call ${kimenetiBiztosít(contact.név)}">${jelek.marka}</button><button class="icon-btn" data-action="remove-contact" data-contact-id="${kimenetiBiztosít(contact.id)}" aria-label="Remove ${kimenetiBiztosít(contact.név)}">×</button></div></div>`).join('');
-  return `<div class="overlay"><article class="dialog"><div class="settings-head"><div><div class="eyebrow">${esc(t('account'))}</div><h2>${esc(t('settings'))}</h2></div><button class="icon-btn" data-action="megse" aria-label="${kimenetiBiztosít(üzenet('close'))}">×</button></div><section class="settings-section"><h3>${esc(t('account'))}</h3><label class="field-label" for="nevbe">${esc(t('display'))}</label><input class="text-input" id="nevbe" maxlength="32" value="${kimenetiBiztosít(fiok.név)}"><div class="settings-row"><span>${esc(t('language'))}</span><select id="nyelv"><option value="en" ${joNyelv === 'en' ? 'selected' : ''}>${esc(t('english'))}</option><option value="hu" ${joNyelv === 'hu' ? 'selected' : ''}>${esc(t('hungarian'))}</option></select></div><div class="settings-links"><button class="text-link" data-action="jog" data-jog="terms">${esc(t('terms'))}</button><button class="text-link" data-action="jog" data-jog="privacy">${esc(t('privacy'))}</button></div><button class="secondary full" style="margin-top:14px" data-action="nevment">${esc(t('save'))}</button></section><section class="settings-section"><h3>Contacts</h3><p class="hint">Calling codes are required. Public keys are optional, so a new contact can be saved without entering one.</p>${contactRows}<label class="field-label" for="kontakt-név">Display name</label><input class="text-input" id="kontakt-név" maxlength="32"><label class="field-label" for="kontakt-kód">Calling code</label><input class="text-input" id="kontakt-kód" maxlength="24" autocomplete="off"><label class="field-label" for="contact-pubkey">Public key (optional)</label><input class="text-input" id="contact-pubkey" maxlength="64" autocomplete="off"><button class="secondary full" data-action="add-contact">Add contact</button></section><section class="settings-section"><h3>Private key storage</h3><p class="hint">${esc(keyWarning)}</p><select class="select-input" id="key-mode"><option value="plain" ${keyMode === 'plain' ? 'selected' : ''}>Plaintext storage</option><option value="password" ${keyMode === 'password' ? 'selected' : ''}>Password protected</option></select><input class="text-input" id="key-password" type="password" autocomplete="new-password" placeholder="Enter a password of at least 10 characters"><input class="text-input" id="key-password-confirm" type="password" autocomplete="new-password" placeholder="Confirm the password"><button class="secondary full" data-action="save-key-mode">Save key protection</button></section><section class="settings-section"><h3>${esc(t('relaySettings'))}</h3><p class="hint">${esc(t('relayHelp'))}</p><textarea class="text-area" id="relbe" rows="4">${esc(rel.join('
-'))}</textarea><button class="secondary full" data-action="relment">${esc(t('reconnect'))}</button></section><section class="settings-section"><h3>${esc(t('erase'))}</h3><p class="hint">${esc(t('eraseWarn'))}</p><button class="danger full" data-action="reset-all">Reset all data</button></section></article></div>`;
-}function torolAblak(masodik = false) {
+  const keyWarning = keyMode === 'password'
+    ? 'The private key is kept encrypted in IndexedDB and is unlocked only with the account password.'
+    : 'The private key is stored in IndexedDB in plain form. It is not protected by a password.';
+  const contactRows = kontaktok.map(contact => {
+    const pubkey = contact.nyilvanos ? ' · ' + esc(contact.nyilvanos) : '';
+    const safeName = kimenetiBiztosít(contact.név);
+    const safeCode = kimenetiBiztosít(contact.kód);
+    const safeId = kimenetiBiztosít(contact.id);
+    return '<div class="settings-row"><span><strong>' + esc(contact.név) + '</strong><small>' + esc(contact.kód) + pubkey + '</small></span><div class="kontakt-actions"><button class="icon-btn" data-action="call-contact" data-contact-kód="' + safeCode + '" aria-label="Call ' + safeName + '">' + jelek.marka + '</button><button class="icon-btn" data-action="remove-contact" data-contact-id="' + safeId + '" aria-label="Remove ' + safeName + '">×</button></div></div>';
+  }).join('');
+  const keyOptions = '<option value="plain"' + (keyMode === 'plain' ? ' selected' : '') + '>Plain storage</option><option value="password"' + (keyMode === 'password' ? ' selected' : '') + '>Password-protected storage</option>';
+  const languageOptions = '<option value="en"' + (joNyelv === 'en' ? ' selected' : '') + '>' + esc(t('english')) + '</option><option value="hu"' + (joNyelv === 'hu' ? ' selected' : '') + '>' + esc(t('hungarian')) + '</option>';
+  return [
+    '<div class="overlay"><article class="dialog"><div class="settings-head"><div><div class="eyebrow">',
+    esc(t('account')),
+    '</div><h2>',
+    esc(t('settings')),
+    '</h2></div><button class="icon-btn" data-action="megse" aria-label="',
+    kimenetiBiztosít(üzenet('close')),
+    '">×</button></div><section class="settings-section"><h3>',
+    esc(t('account')),
+    '</h3><label class="field-label" for="nevbe">',
+    esc(t('display')),
+    '</label><input class="text-input" id="nevbe" maxlength="32" value="',
+    kimenetiBiztosít(fiok.név),
+    '"><div class="settings-row"><span>',
+    esc(t('language')),
+    '</span><select id="nyelv">',
+    languageOptions,
+    '</select></div><div class="settings-links"><button class="text-link" data-action="jog" data-jog="terms">',
+    esc(t('terms')),
+    '</button><button class="text-link" data-action="jog" data-jog="privacy">',
+    esc(t('privacy')),
+    '</button></div><button class="secondary full" style="margin-top:14px" data-action="nevment">',
+    esc(t('save')),
+    '</button></section><section class="settings-section"><h3>Contacts</h3><p class="hint">Calling codes are required. Public keys are optional, so a new contact can be saved without entering one.</p>',
+    contactRows,
+    '<label class="field-label" for="kontakt-név">Display name</label><input class="text-input" id="kontakt-név" maxlength="32"><label class="field-label" for="kontakt-kód">Calling code</label><input class="text-input" id="kontakt-kód" maxlength="24" autocomplete="off"><label class="field-label" for="contact-pubkey">Public key (optional)</label><input class="text-input" id="contact-pubkey" maxlength="64" autocomplete="off"><button class="secondary full" data-action="add-contact">Add contact</button></section><section class="settings-section"><h3>Private key storage</h3><p class="hint">',
+    esc(keyWarning),
+    '</p><select class="select-input" id="key-mode">',
+    keyOptions,
+    '</select><input class="text-input" id="key-password" type="password" autocomplete="new-password" placeholder="Password"><input class="text-input" id="key-password-confirm" type="password" autocomplete="new-password" placeholder="Confirm password"><button class="secondary full" data-action="save-key-mode">Save key protection</button></section><section class="settings-section"><h3>',
+    esc(t('relaySettings')),
+    '</h3><p class="hint">',
+    esc(t('relayHelp')),
+    '</p><textarea class="text-input" id="relbe" rows="4">',
+    esc(rel.join('\n')),
+    '</textarea><button class="secondary full" data-action="relment">',
+    esc(t('reconnect')),
+    '</button></section><section class="settings-section"><h3>Reset</h3><p class="hint">',
+    esc(t('eraseWarn')),
+    '</p><button class="danger full" data-action="reset-all">',
+    esc(t('erase')),
+    '</button></section></article></div>'
+  ].join('');
+}
+function torolAblak(masodik = false) {
   return `<div class="overlay"><article class="dialog"><div class="eyebrow">${esc(t('erase'))}</div><h2>${esc(t(masodik ? 'eraseSecond' : 'eraseFirst'))}</h2>${masodik ? `<input class="text-input" id="torolmez" placeholder="${kimenetiBiztosít(üzenet('typeDelete'))}" autocomplete="off"><p class="form-hiba" id="hiba"></p>` : `<p>${esc(t('eraseWarn'))}</p>`}<div class="dialog-actions"><button class="secondary" data-action="torolmegse">${esc(t('cancel'))}</button><button class="danger" data-action="${masodik ? 'torolveg' : 'torol2'}">${esc(masodik ? t('deleteNow') : t('erase'))}</button></div></article></div>`;
 }
 function unlockAblak() {
