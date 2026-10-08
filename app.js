@@ -3,7 +3,7 @@
   hasFreshProfile, isValidPubkey, loadContacts, loadKeyRecord, makeCallId, makeContactRecord,
   normalizeName, saveContacts, saveKeyRecord, deleteKeyRecord, verifyCallEvent,
   kódLétrehozása, hívásKódNormalizálása, névNormalizálása, frissProfilLétezik,
-  kódÉrvényes
+  kódÉrvényes, adatLista
 } from './security.js';
 
 const alkalmazás = document.querySelector('#app');
@@ -83,6 +83,15 @@ async function loadKey(stored = null) {
   if (!keyHex) throw new Error('missing-key');
   keyInMemory = hexToBytes(keyHex);
   keyRecord = { ...record, mode: 'plain', updatedAt: Math.floor(Date.now() / 1000) };
+}
+async function loadAccountRecord() {
+  const local = JSON.parse(localStorage.getItem(tarolo) || '{}');
+  const selected = local.keyRecord ? await loadKeyRecord(local.keyRecord) : null;
+  if (selected?.keyHex && selected.account?.nyilvanos === local.pubkey) return selected;
+  const records = await adatLista('keys');
+  return records
+    .filter(record => record?.keyHex && record.account?.nyilvanos && record.account.kod)
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0] || null;
 }
 async function deleteKey() {
   if (!fiok) return;
@@ -587,25 +596,18 @@ async function indul() {
     pool = new n.SimplePool();
   } catch { könyvtárHiba = true; }
   try {
-    fiok = JSON.parse(localStorage.getItem(tarolo) || 'null');
-    if (fiok) {
+    const stored = await loadAccountRecord();
+    if (stored) {
+      fiok = { ...stored.account, rel: Array.isArray(stored.account.rel) && stored.account.rel.length ? stored.account.rel : [...alapRel] };
       nyelv = fiok.nyelv === 'hu' ? 'hu' : 'en';
       kontaktok = await loadContacts();
       const regiRel = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band'];
-      if (JSON.stringify(fiok.rel) === JSON.stringify(regiRel)) { rel = [...alapRel]; fiok.rel = rel; ment(); }
+      if (JSON.stringify(fiok.rel) === JSON.stringify(regiRel)) { rel = [...alapRel]; fiok.rel = rel; await ment(); }
       else rel = Array.isArray(fiok.rel) && fiok.rel.length ? fiok.rel : [...alapRel];
-      const stored = await loadKeyRecord(fiok.nyilvanos);
-      if (!stored?.keyHex) {
-        fiok = null;
-        localStorage.removeItem(tarolo);
-      } else {
-        const account = stored.account;
-        if (account?.nyilvanos === fiok.nyilvanos && account?.kod) {
-          fiok = { ...account, rel: Array.isArray(account.rel) && account.rel.length ? account.rel : [...alapRel] };
-          nyelv = fiok.nyelv === 'hu' ? 'hu' : 'en';
-        }
-        await loadKey(stored);
-      }
+      await loadKey(stored);
+    } else {
+      fiok = null;
+      localStorage.removeItem(tarolo);
     }
   } catch { fiok = null; }
   if (pool) kapcsol();

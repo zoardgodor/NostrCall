@@ -30,7 +30,7 @@ function adatBázisMegnyitása() {
 
 function kérésBetöltése(kérés) {
   return new Promise((resolve, reject) => {
-    kérés.onsuccess = () => resolve(kérés.eredmény);
+    kérés.onsuccess = () => resolve(kérés.result);
     kérés.onerror = () => reject(kérés.hiba || new Error('IndexedDB request failed'));
   });
 }
