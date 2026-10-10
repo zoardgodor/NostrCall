@@ -249,6 +249,23 @@ async function jelSor() {
   if (!hívás?.pc || !hívás.zar.length) return;
   for (const jelolt of hívás.zar.splice(0)) await hívás.pc.addIceCandidate(jelolt);
 }
+function iceGyujtesVarasa(pc) {
+  if (pc.iceGatheringState === 'complete') return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pc.removeEventListener('icegatheringstatechange', ellenoriz);
+      reject(new Error('ICE gathering timed out'));
+    }, 15000);
+    function ellenoriz() {
+      if (pc.iceGatheringState !== 'complete') return;
+      clearTimeout(timeout);
+      pc.removeEventListener('icegatheringstatechange', ellenoriz);
+      resolve();
+    }
+    pc.addEventListener('icegatheringstatechange', ellenoriz);
+    ellenoriz();
+  });
+}
 async function pcLetrehoz() {
   const hc = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
   hívás.stream = hc;
@@ -328,6 +345,7 @@ async function hiv(ind, nev) {
     await pcLetrehoz();
     const ajanlat = await hívás.pc.createOffer();
     await hívás.pc.setLocalDescription(ajanlat);
+    await iceGyujtesVarasa(hívás.pc);
     await esemény(hívás.id, ind, 'ajanlat', { hívás: hívás.id, nev: fiok.nev, sdp: hívás.pc.localDescription });
     if (hívás) { hívás.allapot = 'cseng'; render(); }
   } catch (error) {
@@ -345,6 +363,7 @@ async function fogad() {
     await jelSor();
     const val = await hívás.pc.createAnswer();
     await hívás.pc.setLocalDescription(val);
+    await iceGyujtesVarasa(hívás.pc);
     hívás.allapot = 'kapcsolodas';
     await esemény(hívás.id, hívás.peer, 'valasz', { hívás: hívás.id, sdp: hívás.pc.localDescription });
     idoLejar(30000);
