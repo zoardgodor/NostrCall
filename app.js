@@ -254,7 +254,7 @@ function iceGyujtesVarasa(pc) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       pc.removeEventListener('icegatheringstatechange', ellenoriz);
-      reject(new Error('ICE gathering timed out'));
+      resolve();
     }, 15000);
     function ellenoriz() {
       if (pc.iceGatheringState !== 'complete') return;
