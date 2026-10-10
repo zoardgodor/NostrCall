@@ -1,5 +1,5 @@
 ﻿import {
-  bytesToHex, contactCodeExists, contactExists, contactNameConflict, hexToBytes,
+  bytesToHex, hexToBytes,
   hasFreshProfile, isValidPubkey, loadContacts, loadKeyRecord, makeCallId, makeContactRecord,
   normalizeName, saveContacts, saveKeyRecord, deleteKeyRecord, verifyCallEvent,
   kódLétrehozása, hívásKódNormalizálása, névNormalizálása, frissProfilLétezik,
@@ -10,11 +10,14 @@ const alkalmazás = document.querySelector('#app');
 const gyoker = alkalmazás;
 const tároló = 'nostrcall-fiok-v1';
 const lezártHívásTároló = 'nostrcall-lezart-hivasok-v1';
+const turnTároló = 'nostrcall-turn-servers-v1';
 const alapRelékek = ['wss://relay.primal.net', 'wss://nos.lol', 'wss://relay.damus.io'];
 const ikonok = {
   ember: '<svg class="avatar-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor"/><circle cx="12" cy="9" r="3" fill="none" stroke="currentColor"/><path d="M5.5 18.5c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="none" stroke="currentColor" stroke-linecap="round"/></svg>',
   mikro: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="9" y="3" width="6" height="12" fill="none" stroke="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8" fill="none" stroke="currentColor" stroke-linecap="round"/></svg>',
   hang: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 10.5c4.5-4 11.5-4 16 0v5l-4 2-3-4h-2l-3 4-4-2z" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg>',
+  feltoltes: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M4 20h16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  letoltes: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4v12m-5-5 5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   nyil: '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="m2 4 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
   marka: '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3 10h4l2-5 3 10 2-5h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/></svg>'
 };
@@ -41,6 +44,23 @@ const üzenetek = {
   }
 };
 
+const továbbiÜzenetek = {
+  en: {
+    contacts: 'Contacts', contactsEmpty: 'Contacts saved after calls will appear here.', removeContact: 'Remove contact', saveContact: 'Save contact?', saveContactPrompt: 'Save this caller as a contact?', save: 'Save', skip: 'Not now', callContact: 'Call contact', identityMismatch: 'The name or calling code matches a saved contact, but the public key is different. Call blocked.', contactSaved: 'Contact saved.',
+    fileSend: 'Send file', fileReceive: 'Download file', fileChoose: 'Choose a file', fileConfirm: 'Send this file?', fileDownloadConfirm: 'Download this file?', filePending: 'Wait until the other person downloads the pending file.', fileTooLarge: 'Files must be 25 MB or smaller.', fileChannelUnavailable: 'File sharing is not ready for this call.', fileSent: 'File sent.', fileReceived: 'File received.',
+    useTurn: 'Use TURN for this call', turnInfo: 'About TURN', turnInfoText: 'TURN can help when a direct connection cannot be established. The TURN operator relays encrypted WebRTC traffic and can observe your network address and connection metadata. The other party may see the TURN server address instead of your public IP, but the service operator can still see connection metadata. Configure up to three TURN servers in Settings; the service provider may charge fees and process your data under its own terms.', turnServers: 'TURN servers', turnUrl: 'TURN server URL', turnUsername: 'Username', turnCredential: 'Credential', turnServerHelp: 'Enter details from your TURN provider. Credentials are stored in this browser and included in identity exports.', turnMissing: 'Configure at least one TURN server before enabling TURN.', incomingTurn: 'This call uses TURN.',
+    exportIdentity: 'Export identity', importIdentity: 'Import identity backup', backupWarning: 'The export contains your private key and all account data. Malware can read browser storage or the export file, then impersonate you. Never upload the file. Transfer it offline on a USB drive and verify callers with the other person using a separately agreed method.', exportDone: 'Identity backup exported.', importInvalid: 'This identity backup is invalid.',
+    connectionGuideTitle: 'Connection troubleshooting', connectionGuideLead: 'The browsers could not establish a direct media route.', connectionGuideSteps: ['Keep both browsers open and make sure both participants accepted the call.', 'Confirm both devices are online, connected to a Nostr relay, and have microphone permission.', 'Try another network or turn off a VPN/firewall rule that blocks outbound UDP. Port forwarding is usually not needed.', 'Some symmetric NATs and restricted networks cannot connect directly with STUN. This app cannot bypass that without TURN.', 'Configure a trusted TURN provider in Settings, then enable TURN in the call confirmation. The receiving device must also have valid TURN credentials.'], openTurnSettings: 'Open TURN settings',
+  },
+  hu: {
+    contacts: 'Kontaktok', contactsEmpty: 'A hívás után elmentett kontaktok itt jelennek meg.', removeContact: 'Kontakt törlése', saveContact: 'Kontakt mentése?', saveContactPrompt: 'Elmented ezt a hívót kontaktként?', save: 'Mentés', skip: 'Most nem', callContact: 'Kontakt hívása', identityMismatch: 'A név vagy híváskód egyezik egy mentett kontakttal, de a nyilvános kulcs eltér. A hívást letiltottuk.', contactSaved: 'Kontakt elmentve.',
+    fileSend: 'Fájl küldése', fileReceive: 'Fájl letöltése', fileChoose: 'Fájl kiválasztása', fileConfirm: 'Biztosan elküldöd ezt a fájlt?', fileDownloadConfirm: 'Letöltöd ezt a fájlt?', filePending: 'Várd meg, amíg a másik fél letölti a függőben lévő fájlt.', fileTooLarge: 'Legfeljebb 25 MB-os fájl küldhető.', fileChannelUnavailable: 'A fájlmegosztás még nem érhető el ebben a hívásban.', fileSent: 'Fájl elküldve.', fileReceived: 'Fájl érkezett.',
+    useTurn: 'TURN használata ehhez a híváshoz', turnInfo: 'A TURN-ről', turnInfoText: 'A TURN segíthet, ha nem hozható létre közvetlen kapcsolat. A TURN üzemeltetője továbbítja a titkosított WebRTC-forgalmat, és láthatja a hálózati címedet, valamint a kapcsolat metaadatait. A másik fél a nyilvános IP-címed helyett a TURN-szerver címét láthatja, de a szolgáltató továbbra is hozzáférhet a kapcsolati metaadatokhoz. A Beállításokban legfeljebb három TURN-szerver adható meg; a szolgáltató díjat számíthat fel, és saját adatkezelési feltételei érvényesek.', turnServers: 'TURN-szerverek', turnUrl: 'TURN-szerver címe', turnUsername: 'Felhasználónév', turnCredential: 'Hitelesítő adat', turnServerHelp: 'A TURN-szolgáltatótól kapott adatokat add meg. Ezek a böngészőben tárolódnak és bekerülnek a fiókexportba.', turnMissing: 'A TURN bekapcsolása előtt állíts be legalább egy TURN-szervert.', incomingTurn: 'Ez a hívás TURN-t használ.',
+    exportIdentity: 'Fiók exportálása', importIdentity: 'Fiókmentés importálása', backupWarning: 'Az export tartalmazza a privát kulcsot és a fiók összes adatát. Egy kártevő hozzáférhet a böngészőtárhelyhez vagy az exportfájlhoz, majd a nevedben hívást kezdeményezhet. Soha ne töltsd fel a fájlt. Pendrive-on, offline vidd át, és a visszaélések kiszűréséhez külön egyeztess a másik féllel.', exportDone: 'Fiókmentés exportálva.', importInvalid: 'Érvénytelen fiókmentés.',
+    connectionGuideTitle: 'Kapcsolódási hiba útmutató', connectionGuideLead: 'A böngészők nem találtak közvetlen médiaútvonalat.', connectionGuideSteps: ['Mindkét böngésző maradjon nyitva, és mindkét fél fogadja el a hívást.', 'Ellenőrizzétek az internet- és Nostr-relé kapcsolatot, valamint a mikrofon engedélyét.', 'Próbáljatok másik hálózatot, vagy kapcsoljátok ki a kimenő UDP-forgalmat tiltó VPN-/tűzfalszabályt. Porttovábbítás általában nem kell.', 'Bizonyos szimmetrikus NAT-ok és korlátozott hálózatok STUN-nal nem kapcsolhatók össze közvetlenül. TURN nélkül ezt az app nem tudja megkerülni.', 'Állítsatok be egy megbízható TURN-szolgáltatót a Beállításokban, majd kapcsoljátok be a TURN-t a hívás megerősítésénél. A fogadó eszközön is érvényes TURN-adatok kellenek.'], openTurnSettings: 'TURN-beállítások megnyitása'
+  }
+};
+
 let fiok = null;
 let pool = null;
 let nyelv = 'en';
@@ -64,13 +84,100 @@ let dependencyCheck = false;
 let feldolgozottEsemények = new Set();
 let lezártHívások = new Set();
 let várakozóJelzés = new Map();
+let mentendoKontakt = null;
+let turnSzerverek = [];
+let turnInfoNyitva = false;
+let turnKérés = false;
+let connectionHelpNyitva = false;
+let kapottFajlok = new Set();
 
-function üzenet(k) { return üzenetek[nyelv]?.[k] || üzenetek.en[k] || k; }
+function üzenet(k) { return továbbiÜzenetek[nyelv]?.[k] || továbbiÜzenetek.en[k] || üzenetek[nyelv]?.[k] || üzenetek.en[k] || k; }
 function t(k) { return üzenet(k); }
 function esc(v = '') { return kimenetiBiztosít(v); }
 function kimenetiBiztosít(v = '') { return String(v).replace(/[&<>"']/g, x => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[x]); }
 function veletlen() { return makeCallId(); }
 function accountData() { return { nyilvanos: fiok?.nyilvanos, nev: fiok?.nev, kod: fiok?.kod, nyelv: fiok?.nyelv, rel: fiok?.rel }; }
+function kontaktEltérés(nyilvanos, nev, kod) {
+  const névKulcs = normalizeName(nev).toLocaleLowerCase();
+  const kódKulcs = hívásKódNormalizálása(kod);
+  return kontaktok.find(kontakt => kontakt.nyilvanos && kontakt.nyilvanos !== nyilvanos && ((névKulcs && normalizeName(kontakt.név).toLocaleLowerCase() === névKulcs) || (kódKulcs && hívásKódNormalizálása(kontakt.kód) === kódKulcs)));
+}
+function turnBeallitas() {
+  const fields = Array.from({ length: 3 }, (_, index) => {
+    const server = turnSzerverek[index] || {};
+    return `<div class="turn-server"><label class="field-label" for="turn-url-${index}">${esc(t('turnUrl'))} ${index + 1}</label><input class="text-input" id="turn-url-${index}" value="${kimenetiBiztosít(server.urls || '')}" placeholder="turns:turn.example.com:5349"><label class="field-label" for="turn-user-${index}">${esc(t('turnUsername'))}</label><input class="text-input" id="turn-user-${index}" value="${kimenetiBiztosít(server.username || '')}" autocomplete="off"><label class="field-label" for="turn-credential-${index}">${esc(t('turnCredential'))}</label><input class="text-input" id="turn-credential-${index}" type="password" value="${kimenetiBiztosít(server.credential || '')}" autocomplete="new-password"></div>`;
+  }).join('');
+  return `<section class="settings-section"><h3>${esc(t('turnServers'))}</h3><p class="hint">${esc(t('turnServerHelp'))}</p>${fields}<button class="secondary full" data-action="save-turn">${esc(t('save'))}</button></section>`;
+}
+function turnKonfiguralva() {
+  return turnSzerverek.some(server => /^turns?:/i.test(server.urls || '') && server.username && server.credential);
+}
+function turnInfoAblak() {
+  return `<div class="overlay"><article class="dialog"><div class="eyebrow">${esc(t('turnInfo'))}</div><p>${esc(t('turnInfoText'))}</p><div class="dialog-actions"><button class="secondary" data-action="turn-info-close">${esc(t('close'))}</button></div></article></div>`;
+}
+function connectionHelpAblak() {
+  const steps = t('connectionGuideSteps');
+  return `<div class="overlay"><article class="dialog"><div class="eyebrow">${esc(t('connectionGuideTitle'))}</div><h2>${esc(t('connectionGuideLead'))}</h2><ol>${steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol><div class="dialog-actions"><button class="secondary" data-action="connection-help-close">${esc(t('close'))}</button><button class="primary" data-action="open-turn-settings">${esc(t('openTurnSettings'))}</button></div></article></div>`;
+}
+function exportIdentity() {
+  if (!fiok || !keyInMemory) return;
+  const backup = {
+    format: 'nostrcall-identity',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    account: accountData(),
+    privateKeyHex: bytesToHex(keyInMemory),
+    contacts: kontaktok,
+    turnServers: turnSzerverek,
+    closedCallIds: [...lezártHívások]
+  };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `nostrcall-identity-${fiok.kod}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function importIdentity(file) {
+  try {
+    const backup = JSON.parse(await file.text());
+    if (backup.format !== 'nostrcall-identity' || backup.version !== 1 || !backup.account || !/^[a-f0-9]{64}$/.test(backup.privateKeyHex || '') || !Array.isArray(backup.contacts) || !Array.isArray(backup.turnServers)) throw new Error('invalid-backup');
+    const secretKey = hexToBytes(backup.privateKeyHex);
+    const pubkey = window.nostrEszkoz.getPublicKey(secretKey);
+    const code = hívásKódNormalizálása(backup.account.kod);
+    const name = normalizeName(backup.account.nev);
+    if (pubkey !== backup.account.nyilvanos || !name || !kódÉrvényes(code)) throw new Error('invalid-backup');
+    const importedContacts = backup.contacts.map(contact => makeContactRecord(contact));
+    const importedTurn = backup.turnServers.slice(0, 3).filter(server => /^turns?:/i.test(server?.urls || '') && server.username && server.credential);
+    const account = {
+      nyilvanos: pubkey,
+      nev: name,
+      kod: code,
+      nyelv: backup.account.nyelv === 'hu' ? 'hu' : 'en',
+      rel: Array.isArray(backup.account.rel) && backup.account.rel.length ? backup.account.rel.filter(url => /^wss:\/\//i.test(url)) : [...alapRel]
+    };
+    await saveKeyRecord(pubkey, { id: pubkey, mode: 'plain', keyHex: backup.privateKeyHex, account });
+    await saveContacts(importedContacts);
+    fiok = account;
+    keyInMemory = secretKey;
+    kontaktok = importedContacts;
+    turnSzerverek = importedTurn;
+    rel = account.rel.length ? account.rel : [...alapRel];
+    nyelv = account.nyelv;
+    localStorage.setItem(turnTároló, JSON.stringify(turnSzerverek));
+    if (Array.isArray(backup.closedCallIds)) {
+      lezártHívások = new Set(backup.closedCallIds.filter(id => typeof id === 'string').slice(-100));
+      localStorage.setItem(lezártHívásTároló, JSON.stringify([...lezártHívások]));
+    }
+    await ment();
+    nézet = 'home';
+    render();
+    kapcsol();
+  } catch (error) {
+    console.warn('[NostrCall] Identity import failed:', error);
+    hiba(t('importInvalid'));
+  }
+}
 async function ment() {
   if (!fiok) return;
   const account = accountData();
@@ -209,6 +316,16 @@ async function jelKezel(peer, adat, callId, eventId) {
       await esemény(adat.hívás, peer, 'foglalt', { hívás: adat.hívás });
       return;
     }
+    if (adat.turn && !turnKonfiguralva()) {
+      await esemény(adat.hívás, peer, 'elutasit', { hívás: adat.hívás });
+      hiba(t('turnMissing'));
+      return;
+    }
+    if (kontaktEltérés(peer, adat.nev, adat.kod)) {
+      await esemény(adat.hívás, peer, 'elutasit', { hívás: adat.hívás });
+      hiba(t('identityMismatch'));
+      return;
+    }
     const elozo = várakozóJelzés.get(adat.hívás);
     const jeloltek = elozo?.peer === peer ? elozo.lista.map(x => new RTCIceCandidate(x)) : [];
     várakozóJelzés.delete(adat.hívás);
@@ -216,6 +333,8 @@ async function jelKezel(peer, adat, callId, eventId) {
       id: adat.hívás,
       peer,
       nev: adat.nev || 'Nostr user',
+      kod: adat.kod || '',
+      useTurn: Boolean(adat.turn),
       irany: 'bejovo',
       allapot: 'bejovo',
       ajanlat: adat.sdp,
@@ -249,6 +368,86 @@ async function jelSor() {
   if (!hívás?.pc || !hívás.zar.length) return;
   for (const jelolt of hívás.zar.splice(0)) await hívás.pc.addIceCandidate(jelolt);
 }
+function fajlCsatornaBeallitasa(csatorna) {
+  if (!hívás) return;
+  hívás.fileChannel = csatorna;
+  csatorna.binaryType = 'arraybuffer';
+  csatorna.bufferedAmountLowThreshold = 256 * 1024;
+  csatorna.onopen = () => render();
+  csatorna.onclose = () => { if (hívás?.fileChannel === csatorna) { hívás.fileChannel = null; render(); } };
+  csatorna.onmessage = event => fajlUzenet(csatorna, event.data);
+}
+function fajlUzenet(csatorna, adat) {
+  if (!hívás || hívás.fileChannel !== csatorna) return;
+  if (typeof adat === 'string') {
+    let message;
+    try { message = JSON.parse(adat); } catch { return; }
+    if (message.type === 'file-start') {
+      if (typeof message.id !== 'string' || typeof message.name !== 'string' || !Number.isSafeInteger(message.size) || message.size < 0 || message.size > 25 * 1024 * 1024 || hívás.incomingFile || kapottFajlok.has(message.id)) return;
+      hívás.incomingFile = { id: message.id, name: message.name.slice(0, 180), mime: typeof message.mime === 'string' ? message.mime.slice(0, 120) : '', size: message.size, chunks: [], received: 0, complete: false };
+      render();
+    } else if (message.type === 'file-end' && hívás.incomingFile?.id === message.id) {
+      hívás.incomingFile.complete = hívás.incomingFile.received === hívás.incomingFile.size;
+      render();
+    } else if (message.type === 'file-ack' && hívás.outgoingFile?.id === message.id) {
+      hívás.outgoingFile = null;
+      render();
+    }
+    return;
+  }
+  if (!(adat instanceof ArrayBuffer) || !hívás.incomingFile || hívás.incomingFile.complete) return;
+  hívás.incomingFile.received += adat.byteLength;
+  if (hívás.incomingFile.received > hívás.incomingFile.size) { hívás.incomingFile = null; render(); return; }
+  hívás.incomingFile.chunks.push(adat);
+}
+function bufferedAmountAlacsony(csatorna) {
+  if (csatorna.bufferedAmount <= 1024 * 1024) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const ready = () => { cleanup(); resolve(); };
+    const closed = () => { cleanup(); reject(new Error('file channel closed')); };
+    const cleanup = () => { csatorna.removeEventListener('bufferedamountlow', ready); csatorna.removeEventListener('close', closed); };
+    csatorna.addEventListener('bufferedamountlow', ready, { once: true });
+    csatorna.addEventListener('close', closed, { once: true });
+  });
+}
+async function fajlKuldese(file) {
+  const csatorna = hívás?.fileChannel;
+  if (!hívás || csatorna?.readyState !== 'open') { window.alert(t('fileChannelUnavailable')); return; }
+  if (hívás.outgoingFile) { window.alert(t('filePending')); return; }
+  if (file.size > 25 * 1024 * 1024) { window.alert(t('fileTooLarge')); return; }
+  if (!window.confirm(`${t('fileConfirm')}\n${file.name} (${file.size} bytes)`)) return;
+  const fileId = veletlen();
+  hívás.outgoingFile = { id: fileId, name: file.name };
+  render();
+  try {
+    csatorna.send(JSON.stringify({ type: 'file-start', id: fileId, name: file.name, mime: file.type, size: file.size }));
+    for (let start = 0; start < file.size; start += 16 * 1024) {
+      await bufferedAmountAlacsony(csatorna);
+      csatorna.send(await file.slice(start, start + 16 * 1024).arrayBuffer());
+    }
+    csatorna.send(JSON.stringify({ type: 'file-end', id: fileId }));
+  } catch (error) {
+    if (hívás?.outgoingFile?.id === fileId) hívás.outgoingFile = null;
+    console.warn('[NostrCall] File transfer failed:', error);
+    render();
+  }
+}
+function fajlLetoltese() {
+  const file = hívás?.incomingFile;
+  const csatorna = hívás?.fileChannel;
+  if (!file?.complete || !csatorna || csatorna.readyState !== 'open' || kapottFajlok.has(file.id)) return;
+  if (!window.confirm(`${t('fileDownloadConfirm')}\n${file.name}`)) return;
+  kapottFajlok.add(file.id);
+  const url = URL.createObjectURL(new Blob(file.chunks, { type: file.mime || 'application/octet-stream' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  csatorna.send(JSON.stringify({ type: 'file-ack', id: file.id }));
+  hívás.incomingFile = null;
+  render();
+}
 function iceGyujtesVarasa(pc) {
   if (pc.iceGatheringState === 'complete') return Promise.resolve();
   return new Promise((resolve, reject) => {
@@ -269,13 +468,21 @@ function iceGyujtesVarasa(pc) {
 async function pcLetrehoz() {
   const hc = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
   hívás.stream = hc;
-  hívás.pc = new RTCPeerConnection({ iceServers: [{ urls: [
+  const iceServers = [{ urls: [
     'stun:stun.l.google.com:19302',
     'stun:stun1.l.google.com:19302',
     'stun:stun2.l.google.com:19302',
     'stun:stun3.l.google.com:19302',
     'stun:stun4.l.google.com:19302'
-  ] }] });
+  ] }];
+  if (hívás.useTurn) {
+    const configuredTurn = turnSzerverek.filter(server => /^turns?:/i.test(server.urls || '') && server.username && server.credential);
+    if (!configuredTurn.length) throw new Error('TURN server configuration missing');
+    iceServers.push(...configuredTurn.map(server => ({ urls: server.urls, username: server.username, credential: server.credential })));
+  }
+  hívás.pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: hívás.useTurn ? 'relay' : 'all' });
+  hívás.pc.ondatachannel = event => fajlCsatornaBeallitasa(event.channel);
+  if (hívás.irany === 'kimeno') fajlCsatornaBeallitasa(hívás.pc.createDataChannel('files', { ordered: true }));
   hc.getTracks().forEach(s => hívás.pc.addTrack(s, hc));
   hívás.pc.onicecandidate = e => {
     if (!e.candidate || !hívás) return;
@@ -286,14 +493,14 @@ async function pcLetrehoz() {
   hívás.pc.onicecandidateerror = e => console.warn('[NostrCall] ICE candidate error:', e.errorCode, e.errorText, e.url);
   hívás.pc.ontrack = e => {
     hangKép = e.streams[0];
-    if (hívás) { clearTimeout(hívás.ido); hívás.ido = null; hívás.tavoli = hangKép; hívás.allapot = 'kapcsolodva'; render(); }
+    if (hívás) { clearTimeout(hívás.ido); hívás.ido = null; hívás.connected = true; hívás.tavoli = hangKép; hívás.allapot = 'kapcsolodva'; render(); }
   };
   hívás.pc.onconnectionstatechange = () => {
     if (!hívás?.pc) return;
     const all = hívás.pc.connectionState;
     console.info('[NostrCall] Peer connection state:', all);
-    if (all === 'connected') { clearTimeout(hívás.ido); hívás.ido = null; hívás.allapot = 'kapcsolodva'; hívás.minoseg = 'good'; }
-    else if (all === 'failed') { hivasLezar('vege', false); hiba(t('callFail')); return; }
+    if (all === 'connected') { clearTimeout(hívás.ido); hívás.ido = null; hívás.connected = true; hívás.allapot = 'kapcsolodva'; hívás.minoseg = 'good'; }
+    else if (all === 'failed') { connectionHelpNyitva = true; hivasLezar('vege', false); hiba(t('callFail')); return; }
     else if (all === 'closed') return;
     else if (all === 'disconnected' && hívás.allapot === 'kapcsolodva') hívás.minoseg = 'bad';
     render();
@@ -328,6 +535,7 @@ function idoLejar(ms) {
   hívás.ido = setTimeout(() => {
     if (!hívás) return;
     if (hívás.allapot === 'kapcsolodas') {
+      connectionHelpNyitva = true;
       hivasLezar('vege', false);
       hiba(t('callFail'));
       return;
@@ -336,9 +544,9 @@ function idoLejar(ms) {
     hivasLezar('nincsvalasz', false);
   }, ms);
 }
-async function hiv(ind, nev) {
+async function hiv(ind, nev, kod, useTurn = false) {
   if (!pool) { hiba(t('unavailable')); return; }
-  hívás = { id: veletlen(), peer: ind, nev, irany: 'kimeno', allapot: 'hívás', pc: null, stream: null, tavoli: null, zar: [], nemit: false, siket: false };
+  hívás = { id: veletlen(), peer: ind, nev, kod, useTurn, irany: 'kimeno', allapot: 'hívás', pc: null, stream: null, tavoli: null, zar: [], nemit: false, siket: false };
   render();
   idoLejar(45000);
   try {
@@ -346,7 +554,7 @@ async function hiv(ind, nev) {
     const ajanlat = await hívás.pc.createOffer();
     await hívás.pc.setLocalDescription(ajanlat);
     await iceGyujtesVarasa(hívás.pc);
-    await esemény(hívás.id, ind, 'ajanlat', { hívás: hívás.id, nev: fiok.nev, sdp: hívás.pc.localDescription });
+    await esemény(hívás.id, ind, 'ajanlat', { hívás: hívás.id, nev: fiok.nev, kod: fiok.kod, turn: useTurn, sdp: hívás.pc.localDescription });
     if (hívás) { hívás.allapot = 'cseng'; render(); }
   } catch (error) {
     console.warn('[NostrCall] Outgoing call setup failed:', error);
@@ -377,6 +585,9 @@ async function fogad() {
 function hivasLezar(allapot, kuld) {
   if (!hívás) return;
   const regi = hívás;
+  if (regi.connected && regi.kod && regi.nev && !kontaktok.some(kontakt => kontakt.nyilvanos === regi.peer || normalizeName(kontakt.név).toLocaleLowerCase() === normalizeName(regi.nev).toLocaleLowerCase())) {
+    mentendoKontakt = { név: regi.nev, kód: regi.kod, nyilvanos: regi.peer };
+  }
   lezártHívások.add(regi.id);
   lezártHívások = new Set([...lezártHívások].slice(-100));
   localStorage.setItem(lezártHívásTároló, JSON.stringify([...lezártHívások]));
@@ -402,7 +613,7 @@ function fejlec() {
   return `<header class="topbar"><div class="wrap top-inner"><div class="brand"><span class="brand-mark">${jelek.marka}</span>${esc(t('app'))}</div><div class="top-actions"><span class="relay-count"><i class="relay-dot"></i><span id="relayszam">${jelszam()} ${esc(t('relays'))}</span></span>${fiok ? `<button class="icon-btn" data-action="beall" aria-label="${kimenetiBiztosít(üzenet('settings'))}" title="${kimenetiBiztosít(üzenet('settings'))}">${jelek.ember}</button>` : ''}</div></div></header>`;
 }
 function kezdolap() {
-  if (!fiok) return `<section class="home"><div class="eyebrow">${esc(t('tag'))}</div><h1>${esc(t('welcome'))}</h1><p class="lead">${esc(t('welcomeLead'))}</p><form id="kezdo"><label class="field-label" for="név">${esc(t('name'))}</label><input class="text-input" id="név" name="név" maxlength="32" autocomplete="nickname" placeholder="${kimenetiBiztosít(üzenet('namePlaceholder'))}" required><label class="field-label" for="saját-kód">${esc(t('customCode'))}</label><input class="text-input" id="saját-kód" name="saját-kód" maxlength="24" autocomplete="off" placeholder="${kimenetiBiztosít(üzenet('customCodePlaceholder'))}"><p class="form-hiba" id="hiba"></p><div class="profile-code"><div class="profile-code-head"><span>${esc(t('codeIntro'))}</span></div>${kodDoboz(újKód, 'new')}</div><p class="notice">${esc(t('codeHelp'))}</p><div class="divider"></div><button class="primary full" type="submit">${esc(t('start'))}</button><p class="legal-jegyzet">${esc(t('agree'))} <button type="button" data-action="jog" data-jog="terms">${esc(t('terms'))}</button> ${esc(t('and'))} <button type="button" data-action="jog" data-jog="privacy">${esc(t('privacy'))}</button>.</p></form></section>`;
+  if (!fiok) return `<section class="home"><div class="eyebrow">${esc(t('tag'))}</div><h1>${esc(t('welcome'))}</h1><p class="lead">${esc(t('welcomeLead'))}</p><form id="kezdo"><label class="field-label" for="név">${esc(t('név'))}</label><input class="text-input" id="név" name="név" maxlength="32" autocomplete="nickname" placeholder="${kimenetiBiztosít(üzenet('namePlaceholder'))}" required><label class="field-label" for="saját-kód">${esc(t('customCode'))}</label><input class="text-input" id="saját-kód" name="saját-kód" maxlength="24" autocomplete="off" placeholder="${kimenetiBiztosít(üzenet('customCodePlaceholder'))}"><p class="form-hiba" id="hiba"></p><div class="profile-code"><div class="profile-code-head"><span>${esc(t('codeIntro'))}</span></div>${kodDoboz(újKód, 'new')}</div><p class="notice">${esc(t('codeHelp'))}</p><div class="divider"></div><button class="primary full" type="submit">${esc(t('start'))}</button><p class="legal-jegyzet">${esc(t('agree'))} <button type="button" data-action="jog" data-jog="terms">${esc(t('terms'))}</button> ${esc(t('and'))} <button type="button" data-action="jog" data-jog="privacy">${esc(t('privacy'))}</button>.</p></form></section>`;
   const status = nézet === 'elutasitva' ? t('rejected') : nézet === 'foglalt' ? t('busy') : nézet === 'nincsvalasz' ? t('noanswer') : nézet === 'vege' ? t('ended') : '';
   return `<section class="home"><div class="eyebrow">${esc(t('tag'))}</div><h1>${esc(t('homeTitle'))}</h1><p class="lead">${esc(t('homeLead'))}</p><form id="keres"><label class="field-label" for="kód">${esc(t('codeLabel'))}</label><input class="text-input" id="kód" name="kód" maxlength="24" autocomplete="off" placeholder="${kimenetiBiztosít(üzenet('codePlaceholder'))}" required><p class="form-hiba" id="hiba">${status ? esc(status) : könyvtárHiba ? esc(t('unavailable')) : ''}</p><button class="primary full" type="submit">${esc(t('next'))}</button></form><div class="profile-code"><div class="profile-code-head"><span>${esc(t('yourCode'))}</span></div>${kodDoboz(fiok.kod)}</div><p class="notice">${esc(t('codeHelp'))}</p></section>`;
 }
@@ -425,17 +636,18 @@ function hivasAblak() {
 }
 function talalatAblak() {
   if (!találat) return '';
-  return `<div class="overlay"><article class="dialog"><div class="eyebrow">${esc(t('lookupTitle'))}</div><h2>${esc(találat.nev)}</h2><p>${esc(találat.kod)}</p><div class="dialog-actions"><button class="secondary" data-action="megse">${esc(t('cancel'))}</button><button class="primary" data-action="hiv">${esc(t('call'))}</button></div></article></div>`;
+  return `<div class="overlay"><article class="dialog"><div class="eyebrow">${esc(t('lookupTitle'))}</div><h2>${esc(találat.nev)}</h2><p>${esc(találat.kod)}</p><label class="turn-toggle"><input id="useTurn" type="checkbox" ${turnKérés ? 'checked' : ''}><span>${esc(t('useTurn'))}</span><button class="icon-btn turn-info-button" type="button" data-action="turn-info-open" aria-label="${kimenetiBiztosít(t('turnInfo'))}" title="${kimenetiBiztosít(t('turnInfo'))}">i</button></label><div class="dialog-actions"><button class="secondary" data-action="megse">${esc(t('cancel'))}</button><button class="primary" data-action="hiv">${esc(t('call'))}</button></div></article></div>`;
+}
+function kontaktMenteseAblak() {
+  if (!mentendoKontakt) return '';
+  return `<div class="overlay"><article class="dialog"><div class="eyebrow">${esc(t('contacts'))}</div><h2>${esc(t('saveContact'))}</h2><p>${esc(t('saveContactPrompt'))}</p><div class="identity-card"><strong>${esc(mentendoKontakt.név)}</strong><small>${esc(mentendoKontakt.kód)} · ${esc(mentendoKontakt.nyilvanos)}</small></div><div class="dialog-actions"><button class="secondary" data-action="contact-skip">${esc(t('skip'))}</button><button class="primary" data-action="contact-save">${esc(t('save'))}</button></div></article></div>`;
+}
+function kontaktLista() {
+  const rows = kontaktok.map(contact => `<div class="contact-entry"><span><strong>${esc(contact.név)}</strong><small>${esc(contact.kód)}</small></span><div class="contact-actions"><button class="icon-btn" data-action="call-contact" data-contact-kód="${kimenetiBiztosít(contact.kód)}" aria-label="${kimenetiBiztosít(t('callContact'))}: ${esc(contact.név)}" title="${kimenetiBiztosít(t('callContact'))}">${jelek.marka}</button><button class="icon-btn" data-action="remove-contact" data-contact-id="${kimenetiBiztosít(contact.id)}" aria-label="${kimenetiBiztosít(t('removeContact'))}: ${esc(contact.név)}" title="${kimenetiBiztosít(t('removeContact'))}">×</button></div></div>`).join('');
+  return `<aside class="contacts-panel"><h2>${esc(t('contacts'))}</h2>${rows || `<p class="empty">${esc(t('contactsEmpty'))}</p>`}</aside>`;
 }
 function beallitas() {
   const joNyelv = nyelv;
-  const contactRows = kontaktok.map(contact => {
-    const pubkey = contact.nyilvanos ? ' · ' + esc(contact.nyilvanos) : '';
-    const safeName = kimenetiBiztosít(contact.név);
-    const safeCode = kimenetiBiztosít(contact.kód);
-    const safeId = kimenetiBiztosít(contact.id);
-    return '<div class="settings-row"><span><strong>' + esc(contact.név) + '</strong><small>' + esc(contact.kód) + pubkey + '</small></span><div class="kontakt-actions"><button class="icon-btn" data-action="call-contact" data-contact-kód="' + safeCode + '" aria-label="Call ' + safeName + '">' + jelek.marka + '</button><button class="icon-btn" data-action="remove-contact" data-contact-id="' + safeId + '" aria-label="Remove ' + safeName + '">×</button></div></div>';
-  }).join('');
   const languageOptions = '<option value="en"' + (joNyelv === 'en' ? ' selected' : '') + '>' + esc(t('english')) + '</option><option value="hu"' + (joNyelv === 'hu' ? ' selected' : '') + '>' + esc(t('hungarian')) + '</option>';
   return [
     '<div class="overlay"><article class="dialog"><div class="settings-head"><div><div class="eyebrow">',
@@ -460,9 +672,9 @@ function beallitas() {
     esc(t('privacy')),
     '</button></div><button class="secondary full" style="margin-top:14px" data-action="nevment">',
     esc(t('save')),
-    '</button></section><section class="settings-section"><h3>Contacts</h3><p class="hint">Calling codes are required. Public keys are optional, so a new contact can be saved without entering one.</p>',
-    contactRows,
-    '<label class="field-label" for="kontakt-név">Display name</label><input class="text-input" id="kontakt-név" maxlength="32"><label class="field-label" for="kontakt-kód">Calling code</label><input class="text-input" id="kontakt-kód" maxlength="24" autocomplete="off"><label class="field-label" for="contact-pubkey">Public key (optional)</label><input class="text-input" id="contact-pubkey" maxlength="64" autocomplete="off"><button class="secondary full" data-action="add-contact">Add contact</button></section><section class="settings-section"><h3>',
+    '</button></section>',
+    turnBeallitas(),
+    '<section class="settings-section"><h3>',
     esc(t('relaySettings')),
     '</h3><p class="hint">',
     esc(t('relayHelp')),
@@ -482,8 +694,81 @@ function torolAblak(masodik = false) {
 }
 function render() {
   document.documentElement.lang = nyelv;
-  const modal = nézet === 'legal' ? jogNezet() : nézet === 'settings' ? beallitas() : nézet === 'torol1' ? torolAblak(false) : nézet === 'torol2' ? torolAblak(true) : hívás ? hivasAblak() : találat ? talalatAblak() : '';
-  gyoker.innerHTML = `${fejlec()}<main class="wrap main">${kezdolap()}</main>${modal}<audio id="hang" autoplay playsinline></audio>`;
+  const modal = mentendoKontakt ? kontaktMenteseAblak() : connectionHelpNyitva ? connectionHelpAblak() : turnInfoNyitva ? turnInfoAblak() : nézet === 'legal' ? jogNezet() : nézet === 'settings' ? beallitas() : nézet === 'torol1' ? torolAblak(false) : nézet === 'torol2' ? torolAblak(true) : hívás ? hivasAblak() : találat ? talalatAblak() : '';
+  gyoker.innerHTML = `${fejlec()}<main class="wrap main"><div class="app-layout">${kezdolap()}${fiok ? kontaktLista() : ''}</div></main>${modal}<audio id="hang" autoplay playsinline></audio>`;
+  const creationForm = document.querySelector('#kezdo');
+  if (creationForm) {
+    creationForm.noValidate = true;
+    const importLabel = document.createElement('label');
+    importLabel.className = 'field-label';
+    importLabel.htmlFor = 'identity-backup';
+    importLabel.textContent = t('importIdentity');
+    const importInput = document.createElement('input');
+    importInput.className = 'text-input';
+    importInput.type = 'file';
+    importInput.id = 'identity-backup';
+    importInput.name = 'identity-backup';
+    importInput.accept = 'application/json,.json';
+    const divider = creationForm.querySelector('.divider');
+    creationForm.insertBefore(importLabel, divider);
+    creationForm.insertBefore(importInput, divider);
+  }
+  if (nézet === 'settings') {
+    const dialog = document.querySelector('.overlay .dialog');
+    const accountSection = dialog?.querySelector('.settings-section');
+    if (dialog && accountSection) {
+      const backupSection = document.createElement('section');
+      backupSection.className = 'settings-section';
+      backupSection.innerHTML = `<h3>${esc(t('exportIdentity'))}</h3><p class="hint">${esc(t('backupWarning'))}</p><button class="secondary full" data-action="export-identity">${esc(t('exportIdentity'))}</button>`;
+      accountSection.after(backupSection);
+    }
+  }
+  if (nézet === 'legal' && jog === 'privacy') {
+    const legalBody = document.querySelector('.legal-body');
+    if (legalBody) {
+      const warning = document.createElement('p');
+      warning.textContent = t('backupWarning');
+      legalBody.append(warning);
+    }
+  }
+  if (hívás?.useTurn && hívás.irany === 'bejovo') {
+    const badge = document.createElement('p');
+    badge.className = 'turn-badge';
+    badge.textContent = t('incomingTurn');
+    document.querySelector('.call-status')?.insertAdjacentElement('afterend', badge);
+  }
+  const toolbar = document.querySelector('.call-toolbar');
+  if (toolbar) {
+    const controls = document.createElement('div');
+    controls.className = 'file-tools';
+    const send = document.createElement('button');
+    send.type = 'button';
+    send.className = 'icon-btn';
+    send.dataset.action = 'file-send';
+    send.disabled = Boolean(hívás.outgoingFile) || hívás.fileChannel?.readyState !== 'open';
+    send.title = t('fileSend');
+    send.setAttribute('aria-label', t('fileSend'));
+    send.innerHTML = jelek.feltoltes;
+    const receive = document.createElement('button');
+    receive.type = 'button';
+    receive.className = `icon-btn file-receive${hívás.incomingFile?.complete ? ' pending' : ''}`;
+    receive.dataset.action = 'file-download';
+    receive.disabled = !hívás.incomingFile?.complete;
+    receive.title = hívás.incomingFile?.complete ? `${t('fileReceive')}: ${hívás.incomingFile.name}` : t('fileReceive');
+    receive.setAttribute('aria-label', receive.title);
+    receive.innerHTML = jelek.letoltes;
+    const picker = document.createElement('input');
+    picker.type = 'file';
+    picker.id = 'filePicker';
+    picker.className = 'hidden';
+    picker.addEventListener('change', () => {
+      const file = picker.files?.[0];
+      picker.value = '';
+      if (file) void fajlKuldese(file);
+    });
+    controls.append(send, receive, picker);
+    toolbar.prepend(controls);
+  }
   const audio = document.querySelector('#hang');
   if (audio && hangKép) { audio.srcObject = hangKép; audio.muted = Boolean(hívás?.siket); audio.play().catch(() => {}); }
   meret();
@@ -516,6 +801,8 @@ gyoker.addEventListener('submit', async e => {
   e.preventDefault();
   if (e.target.id === 'kezdo') {
     const formData = new FormData(e.target);
+    const backupFile = formData.get('identity-backup');
+    if (backupFile?.size) { await importIdentity(backupFile); return; }
     const nev = formData.get('név')?.toString().trim() || '';
     const sajátKód = hívásKódNormalizálása(formData.get('saját-kód') || '');
     if (!nev) { hiba(t('badName')); return; }
@@ -567,6 +854,7 @@ gyoker.addEventListener('submit', async e => {
     try {
       const tal = await kodKeres(kod);
       if (!tal) { hiba(t('unknown')); return; }
+      if (kontaktEltérés(tal.nyilvanos, tal.nev, tal.kod)) { hiba(t('identityMismatch')); return; }
       találat = tal;
       render();
     } catch { hiba(t('unavailable')); }
@@ -579,10 +867,36 @@ gyoker.addEventListener('click', async e => {
   const a = g.dataset.action;
   if (a === 'masol') { try { await navigator.clipboard.writeText(g.dataset.kod === 'new' ? újKód : g.dataset.kod); g.textContent = t('copied'); } catch {} }
   if (a === 'beall') { nézet = 'settings'; render(); }
+  if (a === 'turn-info-open') { turnInfoNyitva = true; render(); }
+  if (a === 'turn-info-close') { turnInfoNyitva = false; render(); }
+  if (a === 'connection-help-close') { connectionHelpNyitva = false; render(); }
+  if (a === 'open-turn-settings') { connectionHelpNyitva = false; turnInfoNyitva = false; nézet = 'settings'; render(); }
   if (a === 'jog') { jog = g.dataset.jog; nyitott = nézet; nézet = 'legal'; render(); }
   if (a === 'vissza') { nézet = fiok ? 'settings' : 'home'; render(); }
-  if (a === 'megse') { találat = null; if (hívás?.irany === 'kimeno') hivasLezar('vege', true); else { nézet = 'home'; render(); } }
-  if (a === 'hiv' && találat) { const c = találat; találat = null; hiv(c.nyilvanos, c.nev); }
+  if (a === 'megse') { találat = null; turnKérés = false; turnInfoNyitva = false; if (hívás?.irany === 'kimeno') hivasLezar('vege', true); else { nézet = 'home'; render(); } }
+  if (a === 'hiv' && találat) {
+    const c = találat;
+    const useTurn = Boolean(document.querySelector('#useTurn')?.checked || turnKérés);
+    if (useTurn && !turnKonfiguralva()) { window.alert(t('turnMissing')); return; }
+    találat = null;
+    turnKérés = false;
+    hiv(c.nyilvanos, c.nev, c.kod, useTurn);
+  }
+  if (a === 'contact-skip') { mentendoKontakt = null; render(); }
+  if (a === 'contact-save' && mentendoKontakt) {
+    const contact = mentendoKontakt;
+    if (kontaktok.some(item => item.nyilvanos === contact.nyilvanos || normalizeName(item.név).toLocaleLowerCase() === normalizeName(contact.név).toLocaleLowerCase())) {
+      mentendoKontakt = null;
+      render();
+      return;
+    }
+    try {
+      kontaktok.push(makeContactRecord(contact));
+      await saveContacts(kontaktok);
+      mentendoKontakt = null;
+      render();
+    } catch (error) { hiba(error.message); }
+  }
   if (a === 'fogad') await fogad();
   if (a === 'elutasit' && hívás) {
     const adat = { id: hívás.id, peer: hívás.peer };
@@ -594,20 +908,9 @@ gyoker.addEventListener('click', async e => {
   if (a === 'letesz') hivasLezar('vege', true);
   if (a === 'nemit' && hívás) { hívás.nemit = !hívás.nemit; hívás.stream?.getAudioTracks().forEach(x => { x.enabled = !hívás.nemit; }); render(); }
   if (a === 'siket' && hívás) { hívás.siket = !hívás.siket; render(); }
+  if (a === 'file-send') document.querySelector('#filePicker')?.click();
+  if (a === 'file-download') fajlLetoltese();
   if (a === 'eszkoz') devices(g.dataset.tipus);
-  if (a === 'add-contact') {
-    const name = normalizeName(document.querySelector('#kontakt-név').value);
-    const code = hívásKódNormalizálása(document.querySelector('#kontakt-kód').value);
-    const pubkey = document.querySelector('#contact-pubkey').value.trim().toLowerCase();
-    if (!name || !kódÉrvényes(code)) { hiba('Enter a valid name and calling code.'); return; }
-    if (pubkey && !isValidPubkey(pubkey)) { hiba('Enter a valid 64-character public key.'); return; }
-    if (contactNameConflict(kontaktok, name) || contactCodeExists(kontaktok, code) || (pubkey && contactExists(kontaktok, pubkey))) { hiba('A contact with this name, calling code, or public key already exists.'); return; }
-    try {
-      kontaktok.push(makeContactRecord({ name, kód: code, nyilvanos: pubkey || null }));
-      await saveContacts(kontaktok);
-      render();
-    } catch (error) { hiba(error.message); }
-  }
   if (a === 'call-contact') {
     const contact = kontaktok.find(item => item.kód === g.dataset.contactKód);
     if (contact) {
@@ -637,6 +940,16 @@ gyoker.addEventListener('click', async e => {
     if (!rel.length) rel = [...alapRel];
     fiok.rel = rel; await ment(); kapcsol(); g.textContent = t('saved');
   }
+  if (a === 'save-turn') {
+    turnSzerverek = Array.from({ length: 3 }, (_, index) => ({
+      urls: document.querySelector(`#turn-url-${index}`).value.trim(),
+      username: document.querySelector(`#turn-user-${index}`).value.trim(),
+      credential: document.querySelector(`#turn-credential-${index}`).value
+    })).filter(server => server.urls && /^turns?:/i.test(server.urls));
+    localStorage.setItem(turnTároló, JSON.stringify(turnSzerverek));
+    g.textContent = t('saved');
+  }
+  if (a === 'export-identity' && window.confirm(t('backupWarning'))) exportIdentity();
   if (a === 'reset-all') {
     if (!window.confirm(t('eraseWarn'))) return;
     const accountPubkey = fiok?.nyilvanos;
@@ -663,6 +976,7 @@ gyoker.addEventListener('click', async e => {
 });
 
 gyoker.addEventListener('change', e => {
+  if (e.target.id === 'useTurn') turnKérés = e.target.checked;
   if (e.target.id === 'nyelv') { nyelv = e.target.value; if (fiok) { fiok.nyelv = nyelv; ment(); } render(); }
 });
 
@@ -670,6 +984,10 @@ async function indul() {
   try {
     const lezárt = JSON.parse(localStorage.getItem(lezártHívásTároló) || '[]');
     if (Array.isArray(lezárt)) lezártHívások = new Set(lezárt.filter(id => typeof id === 'string'));
+  } catch {}
+  try {
+    const storedTurn = JSON.parse(localStorage.getItem(turnTároló) || '[]');
+    if (Array.isArray(storedTurn)) turnSzerverek = storedTurn.slice(0, 3).filter(server => server && /^turns?:/i.test(server.urls || ''));
   } catch {}
   try {
     const n = await import('https://esm.sh/nostr-tools@2.10.4?bundle');

@@ -46,8 +46,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .icon-btn { width: 38px; height: 38px; display: inline-grid; place-items: center; background: transparent; border: 1px solid var(--line); cursor: pointer; }
 .icon-btn:hover { background: var(--panel-2); border-color: #65736a; }
 .avatar-icon { width: 19px; height: 19px; display: block; }
-.main { min-height: calc(100vh - 76px); padding: 78px 0 50px; }
+.main { width: min(100% - 40px, 1100px); min-height: calc(100vh - 76px); padding: 78px 0 50px; }
+.app-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 48px; align-items: start; }
 .home { width: min(100%, 470px); margin: 0 auto; }
+.contacts-panel { position: sticky; top: 24px; padding-left: 20px; border-left: 1px solid var(--line); }
+.contacts-panel h2 { margin: 0 0 12px; color: var(--muted); font: 11px 'DM Mono', monospace; text-transform: uppercase; }
+.contact-entry { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.contact-entry strong, .contact-entry small { display: block; }
+.contact-entry strong { overflow-wrap: anywhere; font-size: 12px; }
+.contact-entry small { margin-top: 3px; color: var(--muted); font: 10px 'DM Mono', monospace; }
+.contact-entry .icon-btn { flex: 0 0 36px; }
 .eyebrow { color: var(--green); font: 11px 'DM Mono', monospace; letter-spacing: 0; text-transform: uppercase; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 10px; font-size: 31px; line-height: 1.15; font-weight: 600; }
@@ -98,6 +106,12 @@ h1 { margin-bottom: 10px; font-size: 31px; line-height: 1.15; font-weight: 600; 
 .settings-section { padding: 18px 0; border-top: 1px solid var(--line); }
 .settings-section h3 { margin: 0 0 12px; font-size: 13px; font-weight: 600; }
 .settings-section .text-input, .settings-section .text-area { margin-bottom: 10px; }
+.turn-server { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.turn-toggle { display: flex; align-items: center; gap: 10px; margin: 18px 0 8px; color: var(--text); font-size: 12px; }
+.turn-toggle input { width: 16px; height: 16px; accent-color: var(--green-strong); }
+.turn-toggle span { flex: 1; }
+.turn-info-button { flex: 0 0 32px; width: 32px; height: 32px; font-weight: 700; }
+.turn-badge { margin: 8px 0; color: var(--yellow) !important; }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 10px 0; color: var(--muted); font-size: 12px; }
 .settings-row select { width: 155px; padding: 8px; border: 1px solid var(--line); border-radius: 0; background: var(--bg); color: var(--text); }
 .settings-row strong, .settings-row small { display: block; }
@@ -115,6 +129,9 @@ h1 { margin-bottom: 10px; font-size: 31px; line-height: 1.15; font-weight: 600; 
 .device-tools { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 15px; }
 .device-tools .secondary { min-height: 34px; padding: 0 10px; font-size: 11px; }
 .call-toolbar { display: flex; justify-content: center; gap: 8px; margin-top: 15px; }
+.file-tools { display: flex; gap: 6px; }
+.file-receive.pending { border-color: var(--red); color: var(--red); }
+.call-toolbar .icon-btn:disabled { opacity: .42; cursor: not-allowed; }
 .call-toolbar .icon-btn { width: 42px; height: 42px; }
 .call-toolbar .icon-btn.active { border-color: var(--green); color: var(--green); }
 .call-toolbar .hang { width: auto; padding: 0 14px; color: #ffe8e5; border-color: #743832; background: #512a28; }
@@ -134,4 +151,11 @@ h1 { margin-bottom: 10px; font-size: 31px; line-height: 1.15; font-weight: 600; 
   h1 { font-size: 27px; }
   .dialog { padding: 20px; }
   .relay-count { gap: 6px; font-size: 10px; }
+}
+
+@media (max-width: 760px) {
+  .main { width: min(100% - 28px, 760px); padding-top: 54px; }
+  .app-layout { display: flex; flex-direction: column; gap: 36px; }
+  .home, .contacts-panel { width: min(100%, 470px); margin: 0 auto; }
+  .contacts-panel { position: static; padding: 18px 0 0; border-left: 0; border-top: 1px solid var(--line); }
 }

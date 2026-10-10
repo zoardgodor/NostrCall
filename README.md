@@ -1,68 +1,51 @@
 # NostrCall
 
-NostrCall is a browser-based voice calling application. It uses Nostr relays for signed call signaling and WebRTC for direct peer-to-peer audio.
+NostrCall is a browser-based voice calling application. Nostr relays carry signed, encrypted call signaling. WebRTC carries audio and optional files directly between browsers, or through configured TURN servers when both peers enable TURN.
 
 ## Live website
 
-The deployed application is available at:
+The deployed application is available at [zoardgodor.github.io/NostrCall](https://zoardgodor.github.io/NostrCall/). It runs in a current browser without a build step.
 
-https://zoardgodor.github.io/NostrCall/
+## Calls and identity
 
-Open the live website in a current browser. No local installation, build step, or local web server is required.
+Create an account with a display name and calling code, then share the code with the person you want to reach. Before creating an account, NostrCall checks whether the code appears in an unexpired signed profile on the configured relays. The directory is decentralized and relay-dependent: this check cannot guarantee global uniqueness or prevent two people from claiming a code at the same time.
 
-## How it works
+Call signaling is encrypted with NIP-44 v2. Incoming events are signature-, sender-, recipient-, age-, and call-context-checked before decryption. A successful call can be saved as a contact after hangup. Saved contacts include the display name, calling code, and public key. If a later profile uses a saved name or code with a different public key, NostrCall blocks the call.
 
-- The browser creates a Nostr keypair and stores the private key in IndexedDB.
-- New accounts use plaintext key storage by default. Password-protected storage uses PBKDF2-SHA-256 with AES-GCM and keeps the raw key in memory only while the page is open.
-- A short calling code is published as a public Nostr profile event with an expiration tag.
-- Call requests, answers, ICE candidates, declines, and hangups use NIP-44 v2 encryption.
-- Every incoming call event is checked for a valid signature, expected sender, recipient, call ID, message ID, age, and call context before its content is decrypted.
-- Call IDs and event IDs are used to reject replay and cross-call confusion.
-- Voice is transmitted directly between browsers using WebRTC. Nostr relays do not carry the audio stream.
-- The application supports English and Hungarian.
+Contacts appear below the main view on narrow screens and in a side panel on desktop. They are stored in IndexedDB. Manual contact creation is not available in Settings.
 
-Both callers must have the website open, be connected to at least one relay, and grant microphone permission. The application cannot receive calls while the browser is closed and does not provide push notifications. It does not include a TURN media server.
+## File sharing
 
-## Use NostrCall
+During a connected call, use the up-arrow button to select a file. NostrCall asks for confirmation before sending. Files are sent over the WebRTC data channel, not through Nostr relays, and are limited to 25 MB. Only one outgoing file may be awaiting download at a time. The sender can send another after the recipient confirms the download; the recipient confirms each download, and a received file can be downloaded only once in that call.
 
-1. Open the [live website](https://zoardgodor.github.io/NostrCall/).
-2. Enter a display name and select **Start**.
-3. Share the generated calling code with the person you want to call.
-4. The recipient can enter the code in the app and start a call.
-5. Use the call controls to mute your microphone, silence incoming audio, or end the call.
+## TURN and direct connections
 
-The calling code is not a password or a cryptographic secret. The private key is not published to relays, but it is stored in the current browser. Clearing browser storage or deleting the account permanently removes the local key, and there is no key recovery or account synchronization.
+Direct calls use STUN by default and do not use TURN. Port forwarding is usually unnecessary, but restrictive NATs, firewalls, and some mobile or corporate networks can prevent a direct connection. Without TURN, those peer pairs may not connect.
 
-## Key storage and migration
+If direct connection fails, NostrCall opens a troubleshooting guide. Keep both browsers open, confirm the call and microphone permission, check relay connectivity, and try another network or remove VPN/firewall rules that block outbound UDP. Port forwarding is usually not needed. For restrictive NATs, configure a trusted TURN provider on both devices and enable TURN for the call. If the network requires relaying and no TURN service is configured, changing app settings alone cannot make the call connect.
 
-- Plaintext storage is available for convenience but is not protected against a compromised browser or XSS.
-- Password-protected storage is recommended for browser profiles where local storage is exposed to other users or scripts.
-- Password-protected keys are unlocked on startup through the Settings dialog. The raw key is cleared after 15 minutes of inactivity.
-- Existing accounts created before the security migration are automatically moved from local storage to IndexedDB without changing their public key.
-- No WebAuthn/Passkey implementation is included. A real platform authenticator, credential backup, and recovery workflow would be required before claiming that mode.
+To use TURN, configure up to three TURN server URLs, usernames, and credentials in Settings, then enable **Use TURN for this call** in the call confirmation. The receiving peer must also configure valid TURN credentials. TURN mode uses relay-only ICE candidates, so direct address candidates are not sent to the peer. The TURN operator can still observe connection metadata and charge fees; WebRTC media remains encrypted in transit. NostrCall does not provide TURN servers or credentials.
 
-## Contacts and identity
+TURN credentials are stored in this browser and included in identity exports. Only enter credentials from a provider you trust. The provider's own privacy policy and service terms apply.
 
-Contacts are stored in IndexedDB as public names and public keys. Duplicate names and duplicate public keys are rejected. A saved contact can be used directly to start a call, but the caller still receives a signed profile and verifies the call context before accepting the peer.
+## Export and import
 
-## Relays and network requirements
+Settings can export a JSON identity backup containing the private key, account details, contacts, relay settings, and TURN configuration. Select that file on the account creation screen to restore the identity on another browser. The import checks that the private key matches the saved public key.
 
-The application uses the default Nostr relays configured in the app. Relay settings can be changed in the Settings dialog. A working network connection is required for the Nostr Tools module, relay connections, and call signaling.
+The export is unencrypted and grants control of the account. Malware on the computer can access browser data or the export file and can call in your name. Never upload the export. The recommended transfer method is offline on a USB drive. Agree on a separate way to verify each other's identity and detect impersonation.
 
-The public calling-code directory is relay-dependent and does not provide guaranteed availability or global uniqueness. A code can be overwritten by another account, and anyone who learns the code can look up its public profile and attempt to call. Choose a display name that does not expose information you want to keep private.
+## Storage and privacy
 
-Network firewalls, browser policies, or missing direct media routes may prevent a WebRTC connection. Because this project does not include a TURN media server, some networks may not establish a call. Relay URLs are shown as configured, but the application does not currently expose relay operator provenance beyond the connection status.
+The private key and account data are stored locally in the browser. The private key is used to sign Nostr events and derive encryption keys; it is not intentionally sent to relays. Calling codes, display names, and public keys are published in Nostr profile events. Relay operators may store or redistribute those events.
 
-## Browser support
+NostrCall cannot protect a computer from viruses or other malware. Malicious software with access to the computer can read browser storage or exported backups, steal the private key, and initiate calls as the account owner. Protect the device, never upload identity backups, and use offline transfer when moving one.
 
-Use a current desktop or mobile browser that supports WebRTC, Web Crypto, IndexedDB, and microphone access. Microphone access requires a secure context such as HTTPS or localhost. Audio output selection depends on browser support for `HTMLMediaElement.setSinkId`.
+## Requirements and limitations
 
-## Security tests
+Both participants must keep the app open, connect to at least one Nostr relay, and allow microphone access. Calls are not available while the browser is closed; there are no push notifications. Microphone access requires HTTPS or localhost. Browser and network support for WebRTC, Web Crypto, IndexedDB, and media devices is required.
 
-The repository includes Node.js tests for call-context validation, call ID generation, contact normalization, authenticated key encryption, and profile expiration. Run them with `npm test` or `node --test tests/security.test.mjs`. The JavaScript syntax check is available with `npm run check`.
+NostrCall is an experimental demo, not an emergency calling service. No call availability, global calling-code uniqueness, or protection against a compromised device is guaranteed.
 
-The tests could not be executed in the current Windows environment because Node.js is not installed.
+## Development and checks
 
-## Privacy and terms
-
-The in-app Privacy Policy and Terms of Service describe the current behavior of the application. NostrCall is an experimental demo, not an emergency calling service. Review the source and the relay operators' policies before using the application.
+The project is static JavaScript with no build step. With Node.js installed, run `npm test` for the security tests and `npm run check` for JavaScript syntax checks. `git diff --check` checks patch whitespace.
