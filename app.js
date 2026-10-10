@@ -448,23 +448,6 @@ function fajlLetoltese() {
   hívás.incomingFile = null;
   render();
 }
-function iceGyujtesVarasa(pc) {
-  if (pc.iceGatheringState === 'complete') return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      pc.removeEventListener('icegatheringstatechange', ellenoriz);
-      resolve();
-    }, 15000);
-    function ellenoriz() {
-      if (pc.iceGatheringState !== 'complete') return;
-      clearTimeout(timeout);
-      pc.removeEventListener('icegatheringstatechange', ellenoriz);
-      resolve();
-    }
-    pc.addEventListener('icegatheringstatechange', ellenoriz);
-    ellenoriz();
-  });
-}
 async function pcLetrehoz() {
   const hc = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
   hívás.stream = hc;
@@ -493,7 +476,7 @@ async function pcLetrehoz() {
   hívás.pc.onicecandidateerror = e => console.warn('[NostrCall] ICE candidate error:', e.errorCode, e.errorText, e.url);
   hívás.pc.ontrack = e => {
     hangKép = e.streams[0];
-    if (hívás) { clearTimeout(hívás.ido); hívás.ido = null; hívás.connected = true; hívás.tavoli = hangKép; hívás.allapot = 'kapcsolodva'; render(); }
+    if (hívás) { hívás.tavoli = hangKép; render(); }
   };
   hívás.pc.onconnectionstatechange = () => {
     if (!hívás?.pc) return;
@@ -553,7 +536,6 @@ async function hiv(ind, nev, kod, useTurn = false, verified = false) {
     await pcLetrehoz();
     const ajanlat = await hívás.pc.createOffer();
     await hívás.pc.setLocalDescription(ajanlat);
-    await iceGyujtesVarasa(hívás.pc);
     await esemény(hívás.id, ind, 'ajanlat', { hívás: hívás.id, nev: fiok.nev, kod: fiok.kod, turn: useTurn, sdp: hívás.pc.localDescription });
     if (hívás) { hívás.allapot = 'cseng'; render(); }
   } catch (error) {
@@ -565,13 +547,15 @@ async function hiv(ind, nev, kod, useTurn = false, verified = false) {
 async function fogad() {
   if (!hívás) return;
   clearTimeout(hívás.ido);
+  hívás.allapot = 'kapcsolodas';
+  idoLejar(30000);
+  render();
   try {
     await pcLetrehoz();
     await hívás.pc.setRemoteDescription(hívás.ajanlat);
     await jelSor();
     const val = await hívás.pc.createAnswer();
     await hívás.pc.setLocalDescription(val);
-    await iceGyujtesVarasa(hívás.pc);
     hívás.allapot = 'kapcsolodas';
     await esemény(hívás.id, hívás.peer, 'valasz', { hívás: hívás.id, sdp: hívás.pc.localDescription });
     idoLejar(30000);
