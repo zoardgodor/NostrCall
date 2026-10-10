@@ -544,9 +544,9 @@ function idoLejar(ms) {
     hivasLezar('nincsvalasz', false);
   }, ms);
 }
-async function hiv(ind, nev, kod, useTurn = false) {
+async function hiv(ind, nev, kod, useTurn = false, verified = false) {
   if (!pool) { hiba(t('unavailable')); return; }
-  hívás = { id: veletlen(), peer: ind, nev, kod, useTurn, irany: 'kimeno', allapot: 'hívás', pc: null, stream: null, tavoli: null, zar: [], nemit: false, siket: false };
+  hívás = { id: veletlen(), peer: ind, nev, kod, useTurn, verified, irany: 'kimeno', allapot: 'hívás', pc: null, stream: null, tavoli: null, zar: [], nemit: false, siket: false };
   render();
   idoLejar(45000);
   try {
@@ -880,7 +880,7 @@ gyoker.addEventListener('click', async e => {
     if (useTurn && !turnKonfiguralva()) { window.alert(t('turnMissing')); return; }
     találat = null;
     turnKérés = false;
-    hiv(c.nyilvanos, c.nev, c.kod, useTurn);
+    hiv(c.nyilvanos, c.nev, c.kod, useTurn, c.verified);
   }
   if (a === 'contact-skip') { mentendoKontakt = null; render(); }
   if (a === 'contact-save' && mentendoKontakt) {
