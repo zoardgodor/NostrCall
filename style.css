@@ -142,6 +142,17 @@ h1 { margin-bottom: 10px; font-size: 31px; line-height: 1.15; font-weight: 600; 
 .call-topline { display: flex; align-items: center; gap: 10px; }
 .call-topline strong { font-size: 13px; }
 .hint { margin-top: 8px; color: var(--muted); font-size: 11px; }
+.identity-card { margin: 18px 0; padding: 13px; border: 1px solid var(--line); background: var(--bg); }
+.identity-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font: 11px 'DM Mono', monospace; }
+.identity-info-button { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; }
+.pubkey-toggle { width: 100%; min-height: 34px; margin-top: 10px; padding: 0 10px; font-size: 11px; }
+.pubkey-value { display: block; margin-top: 10px; overflow-wrap: anywhere; color: var(--text); font: 10px 'DM Mono', monospace; }
+.identity-card small { display: block; margin-top: 10px; font-size: 11px; line-height: 1.4; }
+.identity-card small.verified { color: var(--green); }
+.identity-card small.not-verified, .identity-card small.mismatch { color: var(--red); }
+.identity-card small.mismatch { font-weight: 700; }
+.identity-card.mismatch { border-color: var(--red); background: #291a19; }
+.nested-overlay { z-index: 6; }
 .hidden { display: none !important; }
 
 @media (max-width: 560px) {
